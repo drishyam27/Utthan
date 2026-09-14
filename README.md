@@ -12,6 +12,13 @@
 
 ---
 
+### 🖥️ Desktop Interface
+<p align="center">
+  <img src="public/assets/desktop-preview.png" alt="Utthan Platform Desktop Interface" width="100%" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);" />
+</p>
+
+---
+
 ## 📖 Overview
 
 **Utthan (उत्थान)** is a Digital Public Goods initiative designed to bridge the gap between grassroots citizens and the vast ecosystem of Indian government welfare programs, vocational training schemes, stipends, and dignified livelihood pathways.
