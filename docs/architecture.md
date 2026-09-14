@@ -24,8 +24,10 @@
 ┌─────────────────────────────────────────────────────────────┐
 │          PHASE 1 IMPLEMENTED DATA FOUNDATION LAYER          │
 ├─────────────────────────────────────────────────────────────┤
-│ 1. Official Locations:  src/data/locations.js               │
-│    (36 States/UTs & 76 Districts from Govt LGD)             │
+│ 1. Official Locations:  src/data/canonicalLocations.json    │
+│    (Authoritative 36 States/UTs & 784 Districts from LGD)   │
+│    Application Module:  src/data/locations.js (Derived)     │
+│    Raw Source:          data/raw/lgd_districts.xls.xlsx     │
 │                                                             │
 │ 2. Verified Schemes:    src/data/verifiedOpportunities.js   │
 │    (7 Real Government Schemes with NSQF & Source URLs)      │
@@ -39,15 +41,20 @@
 │ 5. Database Schema:     supabase/migrations/                │
 │    (PostgreSQL DDL with RLS, Foreign Keys & Constraints)    │
 │                                                             │
-│ 6. Reproducible Seed:   supabase/seed/seed.sql              │
-│    (Idempotent SQL seed script for Supabase DB)             │
+│ 6. Reproducible Seeds:  supabase/seed/seed.sql (Base)       │
+│                         supabase/seed/02_all_india_districts│
+│                         (Complete 784 LGD districts seed)   │
+│    Verification SQL:    supabase/verify/                    │
+│                         verify_location_master.sql          │
 │                                                             │
 │ 7. Automated Tests:     tests/                              │
-│    (27 passing checks for 5 core matching cases & integrity)│
+│    (49 passing checks: 14 matching tests & 35 data integrity│
+│     checks enforcing exact 784 districts and zero subsets)  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 * **Frontend**: Client-side React 19 Single Page Application with zero visual regressions.
+* **National Location Master**: Authoritative Government of India master based on Local Government Directory (LGD), Ministry of Panchayati Raj (`data/raw/lgd_districts.xls.xlsx`), canonicalized into `src/data/canonicalLocations.json`, exposed via `src/data/locations.js`, and seeded via `supabase/seed/02_all_india_districts.sql`. Remote Supabase execution is a separate manual step if not performed directly.
 * **Database Foundation**: Complete Supabase-compatible PostgreSQL schema and seed migrations created.
 * **Deterministic Matching Engine**: Fully implemented and validated via test cases.
 * **Temporary Fallback**: `src/data/mockOpportunities.js` is preserved as an in-memory fallback until Phase 2 connects the live database via FastAPI.

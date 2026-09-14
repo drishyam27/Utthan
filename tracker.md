@@ -23,11 +23,11 @@
 | **Multilingual UI (23 Langs)** | **COMPLETED** | UI translations dictionary and native scripts active | Maintain and keep synced |
 | **Voice Playback (TTS)** | **PARTIALLY COMPLETED** | Sarvam AI Bulbul:v3 active for 11 languages; browser fallback for 12 | Expand coverage in voice service |
 | **Voice Input (STT)** | **PARTIALLY COMPLETED** | Native browser Web Speech API (Chromium-supported) | Evaluate Bhashini / Sarvam STT |
-| **State & District Dataset** | **COMPLETED** | Official 36 States/UTs & 76 key districts in `src/data/locations.js` | Connect to onboarding UI in Phase 3 |
+| **State & District Dataset** | **COMPLETED** | Authoritative 36 States/UTs & 784 districts from LGD master in `canonicalLocations.json` & `locations.js` | Connect to onboarding UI in Phase 3 |
 | **Verified Opportunities Data**| **COMPLETED** | 7 verified government schemes with NSQF & portal source links | Expose via FastAPI in Phase 2 |
 | **Skills Catalog (NSQF)** | **COMPLETED** | 11 standardized skills with official SSC QP codes & levels | Expose via FastAPI in Phase 2 |
 | **Recommendation Engine** | **COMPLETED** | Deterministic eligibility checks & weighted scoring in `recommendationEngine.js` | Expose via API endpoint in Phase 2 |
-| **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & `supabase/seed/seed.sql` | Deploy to user's live Supabase instance |
+| **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & 784-district seed in `supabase/seed/02_all_india_districts.sql` | Deploy to user's live Supabase instance |
 | **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
 | **Backend API (FastAPI)** | **NOT STARTED** | None (scheduled for Phase 2) | Implement backend gateway in Phase 2 |
 | **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
@@ -44,13 +44,13 @@
 - [x] Verification of existing UI functionality, clean build (`npm run build`), and zero breaking changes.
 
 ### ✅ Phase 1: Data Foundations & Real Opportunity Engine (COMPLETED)
-- [x] Master dataset of 36 Indian States/UTs and key districts from LGD (`src/data/locations.js`).
+- [x] Complete authoritative national master of 36 Indian States/UTs and 784 districts from Local Government Directory (`src/data/canonicalLocations.json` & `src/data/locations.js`).
+- [x] Complete 784-district database seed script (`supabase/seed/02_all_india_districts.sql`) with verification script (`supabase/verify/verify_location_master.sql`).
 - [x] PostgreSQL / Supabase schema for `states`, `districts`, `skills`, `opportunities`, `opportunity_skills`, `beneficiaries`, `interview_sessions`, and `applications` (`supabase/migrations/20260915000001_initial_schema.sql`).
 - [x] Verified opportunity dataset (PM Vishwakarma, PM Surya Ghar, PMKVY 4.0, DDU-GKY, Lakhpati Didi, PM-AJAY GIA) with official sources, eligibility criteria, and NSQF levels.
 - [x] Standardized skills catalog with Sector Skill Council QP codes.
 - [x] Deterministic eligibility rules engine & weighted scoring matrix (`src/services/recommendationEngine.js`).
-- [x] Idempotent SQL database seed script (`supabase/seed/seed.sql`).
-- [x] Automated test suite passing 27 checks for matching cases & data integrity (`npm test`).
+- [x] Automated test suite passing 49 checks for matching cases & national data integrity (`npm test`).
 - [x] Preserved `mockOpportunities.js` as temporary frontend fallback without breaking the UI.
 
 ### ⏳ Phase 2: Backend Gateway & Secure Service Layer (NOT STARTED)
