@@ -6,24 +6,65 @@
 
 ## 📊 Summary Status
 
-- **Status**: Active Development & MVP Feature-Complete
+- **Status**: Phase 0 Complete — Architecture & Baseline Prepared
+- **Current Development Phase**: Phase 0 (Repository, Environment & Architecture Preparation)
+- **Next Development Phase**: Phase 1 (Data Foundations & Real Opportunity Engine)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
-- **Primary Tech Stack**: React 18, Vite 6, Tailwind CSS, Lucide Icons, Web Speech API Architecture
+- **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, Lucide Icons, Web Speech API Architecture
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
 
 ---
 
-## ✅ Completed Features & Milestones
+## 🚦 Component Status Overview
 
-### 1. 🎨 Visual Design & Cultural Assets
-- [x] **Desktop Authentic Background**: High-resolution landscape artwork (`utthan-bg.jpg`) active on viewports $\ge$ 768px.
-- [x] **Mobile Authentic Background**: High-resolution portrait artwork (`utthan-bg-mobile.jpg`) active on viewports < 768px.
-- [x] **Calibrated Light Mode**:
-  - Softened background saturation (`saturate-[0.70]`) and tuned brightness (`brightness-[1.20]`).
-  - Warm cream/off-white background base (`#FAF7F0`) with 50% artwork opacity.
-  - Ambient central radial glow for maximum readability of text, cards, and CTA buttons.
-- [x] **Cultural Motif Preservation**: Authentic Indian rural symbols preserved (Alpana/Mandala, crops/paddy, sewing machine, bobbin/thread, wicker basket, cow and calf, fish/fisheries, wheel edger/plow, temple dome, village huts).
-- [x] **Editorial Typography**: Premium serif headings (`font-serif-heading`) paired with clean modern body typography (`Inter` / system sans).
+| Component | Status | Current Reality | Next Phase Action |
+|---|---|---|---|
+| **Visual UI & Design System** | **COMPLETED** | Polished, responsive cultural theme, light-calibrated mode | Preserve without visual redesign |
+| **Multilingual UI (23 Langs)** | **COMPLETED** | UI translations dictionary and native scripts active | Maintain and keep synced |
+| **Voice Playback (TTS)** | **PARTIALLY COMPLETED** | Sarvam AI Bulbul:v3 active for 11 languages; browser fallback for 12 | Expand coverage in voice service |
+| **Voice Input (STT)** | **PARTIALLY COMPLETED** | Native browser Web Speech API (Chromium-supported) | Evaluate Bhashini / Sarvam STT |
+| **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
+| **State & District Dataset** | **NOT STARTED** | None currently in repository; hardcoded profile string | Implement master dataset in Phase 1 |
+| **Opportunities Dataset** | **HARDCODED / MOCK** | 5 static JavaScript objects in `mockOpportunities.js` | Replace with DB schema & seed data in Phase 1 |
+| **Recommendation Engine** | **NOT STARTED** | Category filter only; hardcoded match scores | Implement deterministic engine in Phase 1 |
+| **Backend API (FastAPI)** | **NOT STARTED** | None (client-side SPA direct SaaS calls) | Implement backend gateway in Phase 2 |
+| **Database (Postgres/Supabase)**| **NOT STARTED** | None (in-memory React state, resets on refresh) | Implement tables and client in Phase 1/2 |
+| **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
+
+---
+
+## 🚀 Strict Phase-by-Phase Roadmap
+
+### ✅ Phase 0: Repository, Environment & Architecture Preparation (COMPLETED)
+- [x] Full technical audit and implementation baseline documentation.
+- [x] Environment variable isolation verification (`.gitignore` protection).
+- [x] Formal system architecture and planned entity model documentation (`docs/architecture.md`).
+- [x] Deterministic recommendation pipeline design.
+- [x] Verification of existing UI functionality, clean build (`npm run build`), and zero breaking changes.
+
+### ⏳ Phase 1: Data Foundations & Real Opportunity Engine (NOT STARTED)
+- [ ] Master dataset of Indian States/UTs and districts.
+- [ ] PostgreSQL / Supabase schema for `beneficiaries`, `opportunities`, `skills`, and `applications`.
+- [ ] Real government opportunity seed records (PM Vishwakarma, PMKVY 4.0, DDU-GKY, Lakhpati Didi) tagged with eligibility & NSQF levels.
+- [ ] Deterministic eligibility filter and rule-based scoring engine.
+- [ ] Replace `mockOpportunities.js` with structured data access.
+
+### ⏳ Phase 2: Backend Gateway & Secure Service Layer (NOT STARTED)
+- [ ] FastAPI backend server setup.
+- [ ] Server-side proxy for Groq and Sarvam AI APIs to prevent client-side secret exposure.
+- [ ] REST API endpoints for opportunities catalog and recommendation queries.
+- [ ] CORS whitelisting and rate limiting.
+
+### ⏳ Phase 3: Adaptive Voice Interview & Profile Extraction (NOT STARTED)
+- [ ] Onboarding flow capturing Beneficiary Name, State, and District.
+- [ ] Conversational interview connected to Groq LLM for semantic profile extraction.
+- [ ] Voice prompt synchronizer with Sarvam TTS.
+- [ ] Dynamic opportunity matching triggered upon interview completion.
+
+### ⏳ Phase 4: Citizen Engagement, Persistence & PWA (NOT STARTED)
+- [ ] Local storage and database persistence for citizen skill profiles.
+- [ ] Downloadable application receipt (PDF / Image) with QR code.
+- [ ] PWA offline asset caching for low-connectivity rural environments.
 
 ---
 
