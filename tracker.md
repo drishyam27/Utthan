@@ -6,11 +6,11 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 1 Complete — Data Foundation, Schema & Deterministic Matcher Active
-- **Current Development Phase**: Phase 1 (Data Foundations, Supabase/PostgreSQL & Deterministic Matcher)
-- **Next Development Phase**: Phase 2 (FastAPI Backend Gateway & Secure Service Layer)
+- **Status**: Phase 2 Complete — FastAPI Backend / API Foundation Active
+- **Current Development Phase**: Phase 2 (FastAPI Backend / API Foundation)
+- **Next Development Phase**: Phase 3 (Adaptive Voice Interview & Profile Extraction)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
-- **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, Lucide Icons, Supabase/PostgreSQL DDL
+- **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
 
 ---
@@ -24,12 +24,12 @@
 | **Voice Playback (TTS)** | **PARTIALLY COMPLETED** | Sarvam AI Bulbul:v3 active for 11 languages; browser fallback for 12 | Expand coverage in voice service |
 | **Voice Input (STT)** | **PARTIALLY COMPLETED** | Native browser Web Speech API (Chromium-supported) | Evaluate Bhashini / Sarvam STT |
 | **State & District Dataset** | **COMPLETED** | Authoritative 36 States/UTs & 784 districts from LGD master in `canonicalLocations.json` & `locations.js` | Connect to onboarding UI in Phase 3 |
-| **Verified Opportunities Data**| **COMPLETED** | 7 verified government schemes with NSQF & portal source links | Expose via FastAPI in Phase 2 |
-| **Skills Catalog (NSQF)** | **COMPLETED** | 11 standardized skills with official SSC QP codes & levels | Expose via FastAPI in Phase 2 |
-| **Recommendation Engine** | **COMPLETED** | Deterministic eligibility checks & weighted scoring in `recommendationEngine.js` | Expose via API endpoint in Phase 2 |
-| **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & 784-district seed in `supabase/seed/02_all_india_districts.sql` | Deploy to user's live Supabase instance |
+| **Verified Opportunities Data**| **COMPLETED** | 7 verified government schemes with NSQF & portal source links | Served via `/api/opportunities` |
+| **Skills Catalog (NSQF)** | **COMPLETED** | 11 standardized skills with official SSC QP codes & levels | Embedded in opportunity details |
+| **Recommendation Engine** | **COMPLETED** | Deterministic eligibility checks & weighted scoring in `recommendationEngine.js` | Connect to backend in Phase 3 |
+| **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & 784-district seed in `supabase/seed/02_all_india_districts.sql` | Verified in Supabase |
 | **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
-| **Backend API (FastAPI)** | **NOT STARTED** | None (scheduled for Phase 2) | Implement backend gateway in Phase 2 |
+| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend running on Python 3.12 with health, location, and opportunity routes | Connect to React frontend in Phase 3 |
 | **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
 
 ---
@@ -53,11 +53,18 @@
 - [x] Automated test suite passing 49 checks for matching cases & national data integrity (`npm test`).
 - [x] Preserved `mockOpportunities.js` as temporary frontend fallback without breaking the UI.
 
-### ⏳ Phase 2: Backend Gateway & Secure Service Layer (NOT STARTED)
-- [ ] FastAPI backend server setup.
-- [ ] Server-side proxy for Groq and Sarvam AI APIs to prevent client-side secret exposure.
-- [ ] REST API endpoints for opportunities catalog and recommendation queries.
-- [ ] CORS whitelisting and rate limiting.
+### ✅ Phase 2: FastAPI Backend / API Foundation (COMPLETED)
+- [x] Modular FastAPI backend application entry point (`backend/app/main.py`).
+- [x] Environment and secret configuration with strict frontend isolation (`backend/app/core/config.py`, `backend/.env.example`).
+- [x] Supabase server-side connection client with graceful disconnected handling (`backend/app/db/supabase.py`).
+- [x] Health check endpoints: `GET /api/health` and `GET /api/health/db` (`backend/app/api/routes/health.py`).
+- [x] Location endpoints serving authoritative LGD data: `GET /api/locations/states` and `GET /api/locations/states/{state_code}/districts` (`backend/app/api/routes/locations.py`).
+- [x] Opportunity endpoints with filtering and skills expansion: `GET /api/opportunities` and `GET /api/opportunities/{opportunity_id}` (`backend/app/api/routes/opportunities.py`).
+- [x] Clean Pydantic response schemas (`backend/app/schemas/`).
+- [x] Configurable CORS middleware supporting `FRONTEND_ORIGIN` (`http://localhost:5173`).
+- [x] Automatic OpenAPI documentation (`/docs`, `/redoc`).
+- [x] Automated backend test suite with 15 passing tests (`pytest backend/tests`).
+- [x] Zero frontend redesign or breakage; frontend build (`npm run build`) and tests (`npm test`) fully intact.
 
 ### ⏳ Phase 3: Adaptive Voice Interview & Profile Extraction (NOT STARTED)
 - [ ] Onboarding flow capturing Beneficiary Name, State, and District.

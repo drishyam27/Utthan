@@ -57,11 +57,47 @@
 * **National Location Master**: Authoritative Government of India master based on Local Government Directory (LGD), Ministry of Panchayati Raj (`data/raw/lgd_districts.xls.xlsx`), canonicalized into `src/data/canonicalLocations.json`, exposed via `src/data/locations.js`, and seeded via `supabase/seed/02_all_india_districts.sql`. Remote Supabase execution is a separate manual step if not performed directly.
 * **Database Foundation**: Complete Supabase-compatible PostgreSQL schema and seed migrations created.
 * **Deterministic Matching Engine**: Fully implemented and validated via test cases.
-* **Temporary Fallback**: `src/data/mockOpportunities.js` is preserved as an in-memory fallback until Phase 2 connects the live database via FastAPI.
+* **Temporary Fallback**: `src/data/mockOpportunities.js` is preserved as an in-memory fallback until Phase 3 connects the live database via the FastAPI backend.
 
 ---
 
-### Target Architecture (Planned / Future)
+### Implemented Backend Architecture (Phase 2 Implemented)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Utthan React Frontend                    │
+│            (Preserved Cultural UI + Responsive SPA)         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ HTTPS / JSON API (/api/*)
+                               │ (CORS Restricted: FRONTEND_ORIGIN)
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    FastAPI Backend Gateway                  │
+│                     (backend/app/main.py)                   │
+│                                                             │
+│ • Health Routes:         /api/health, /api/health/db        │
+│ • Location Routes:       /api/locations/states, districts   │
+│ • Opportunities Routes:  /api/opportunities, /{id}          │
+│ • Security Boundary:     Service Role Key isolated on server│
+│ • OpenAPI Documentation: /docs, /redoc                      │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ Server-side Client (supabase-py)
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Supabase PostgreSQL                      │
+│ (36 States, 784 Districts, 11 Skills, 7 Opportunities, RLS) │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Security Boundary & Credential Isolation Rules
+1. **Server-Side Exclusivity**: `SUPABASE_SERVICE_ROLE_KEY` and backend secrets are loaded exclusively by the Python FastAPI server (`backend/app/core/config.py`).
+2. **Zero Frontend Secret Exposure**: Browser JavaScript and React frontend bundles NEVER receive the service-role key. No `VITE_` variable may ever be created for the service-role key.
+3. **CORS Enforcement**: The FastAPI backend enforces strict CORS headers allowing requests exclusively from the designated `FRONTEND_ORIGIN` (default: `http://localhost:5173`).
+4. **Resilient Failure Mode**: If Supabase credentials are missing or unconfigured, the backend reports clean diagnostic status codes (`503 Service Unavailable`) on `/api/health/db` without crashing or returning unvetted mock data.
+
+---
+
+### Target Architecture (Phase 3 & Future Planned)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
