@@ -3,11 +3,14 @@ Utthan Platform - FastAPI Application Entry Point
 Phase 2: Backend & API Foundation Layer
 """
 
+import logging
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.api.router import api_router
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -33,6 +36,7 @@ app.add_middleware(
 # Global Exception Handler to ensure safe, structured JSON errors without leaking stack traces
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled API exception for %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "An internal server error occurred. Please contact support."}

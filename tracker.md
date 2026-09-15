@@ -6,7 +6,7 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 2 Complete — FastAPI Backend / API Foundation Active
+- **Status**: Phase 2A Complete — FastAPI Backend / Supabase Live Verification & Stabilization Complete
 - **Current Development Phase**: Phase 2 (FastAPI Backend / API Foundation)
 - **Next Development Phase**: Phase 3 (Adaptive Voice Interview & Profile Extraction)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
@@ -29,7 +29,7 @@
 | **Recommendation Engine** | **COMPLETED** | Deterministic eligibility checks & weighted scoring in `recommendationEngine.js` | Connect to backend in Phase 3 |
 | **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & 784-district seed in `supabase/seed/02_all_india_districts.sql` | Verified in Supabase |
 | **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
-| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend running on Python 3.12 with health, location, and opportunity routes | Connect to React frontend in Phase 3 |
+| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend live-verified against Supabase with health, location, and opportunity routes | Connect to React frontend in Phase 3 |
 | **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
 
 ---
@@ -65,6 +65,14 @@
 - [x] Automatic OpenAPI documentation (`/docs`, `/redoc`).
 - [x] Automated backend test suite with 15 passing tests (`pytest backend/tests`).
 - [x] Zero frontend redesign or breakage; frontend build (`npm run build`) and tests (`npm test`) fully intact.
+
+### ✅ Phase 2A: Supabase + Backend Live Verification & Stabilization (COMPLETED)
+- [x] Made `lgd_code` and `lgd_district_code` part of the reproducible initial schema while retaining backward-compatible seed guards.
+- [x] Preserved the additive PostgREST permissions/schema-cache repair migration for existing Supabase projects.
+- [x] Live-verified the configured Supabase project: 36 States/UTs, 784 districts, 7 opportunities, mapped skills, expected API routes, and negative cases.
+- [x] Sanitized production-facing backend error responses and added server-side exception logging.
+- [x] Standardized backend test fixtures on the production `priority` mapping field.
+- [x] Confirmed frontend/backend integration remains intentionally pending for a later phase.
 
 ### ⏳ Phase 3: Adaptive Voice Interview & Profile Extraction (NOT STARTED)
 - [ ] Onboarding flow capturing Beneficiary Name, State, and District.

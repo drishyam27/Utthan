@@ -108,7 +108,8 @@ class MockSupabaseClient:
             {
                 "opportunity_id": "opp-pm-vishwakarma-solar",
                 "skill_id": "skill-solar-inst",
-                "is_primary": True
+                "is_taught": True,
+                "priority": 1
             }
         ]
 

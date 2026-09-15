@@ -5,7 +5,8 @@
 -- Covers all 36 States/UTs and exactly 784 official districts
 -- ============================================================================
 
--- Ensure lgd_code and lgd_district_code columns exist safely
+-- The LGD columns are part of the initial schema. Keep these idempotent guards
+-- for databases created before Phase 2A made the migration self-contained.
 ALTER TABLE states ADD COLUMN IF NOT EXISTS lgd_code INTEGER;
 ALTER TABLE districts ADD COLUMN IF NOT EXISTS lgd_district_code INTEGER;
 

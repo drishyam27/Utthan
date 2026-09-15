@@ -36,6 +36,12 @@ def test_filter_opportunities_by_state(client):
     assert data["total"] == 2
 
 
+def test_filter_opportunities_by_unknown_state(client):
+    response = client.get("/api/opportunities?state_id=state-does-not-exist")
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
 def test_get_opportunity_detail_valid(client):
     response = client.get("/api/opportunities/opp-pm-vishwakarma-solar")
     assert response.status_code == 200
@@ -46,6 +52,7 @@ def test_get_opportunity_detail_valid(client):
     assert len(data["skills"]) == 1
     assert data["skills"][0]["name"] == "Solar PV Rooftop Installation"
     assert data["skills"][0]["nsqf_level"] == 4
+    assert data["skills"][0]["is_primary"] is True
 
 
 def test_get_opportunity_not_found(client):

@@ -4,6 +4,7 @@ Queries authoritative Government of India State and District data from Supabase.
 """
 
 from typing import List
+import logging
 from fastapi import APIRouter, HTTPException, status, Depends
 from supabase import Client
 from app.db.supabase import get_supabase_client
@@ -11,6 +12,7 @@ from app.schemas.location import StateResponse, StateDistrictsResponse, District
 from app.schemas.common import ErrorResponse
 
 router = APIRouter(prefix="/locations", tags=["Locations"])
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -25,10 +27,11 @@ def list_states(client: Client = Depends(get_supabase_client)):
         return [StateResponse(**row) for row in (response.data or [])]
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
+        logger.exception("Failed to retrieve states from Supabase")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database query failed: {str(exc)}"
+            detail="Failed to retrieve states from the database."
         )
 
 
@@ -73,8 +76,9 @@ def list_districts_by_state(state_code: str, client: Client = Depends(get_supaba
         )
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
+        logger.exception("Failed to retrieve districts for state identifier")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve districts for state '{state_code}': {str(exc)}"
+            detail="Failed to retrieve districts from the database."
         )

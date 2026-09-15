@@ -4,6 +4,7 @@ Queries verified government schemes, subsidized skilling courses, and grants fro
 """
 
 from typing import Optional
+import logging
 from fastapi import APIRouter, HTTPException, status, Query, Depends
 from supabase import Client
 from app.db.supabase import get_supabase_client
@@ -16,6 +17,7 @@ from app.schemas.opportunity import (
 from app.schemas.common import ErrorResponse
 
 router = APIRouter(prefix="/opportunities", tags=["Opportunities"])
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -50,6 +52,12 @@ def list_opportunities(
 
         # If state_id is provided, include schemes matching state_id PLUS Pan-India schemes (where state_id is null)
         if state_id:
+            state_res = client.table("states").select("id").eq("id", state_id).limit(1).execute()
+            if not state_res.data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"State with identifier '{state_id}' was not found in location master."
+                )
             rows = [r for r in rows if r.get("state_id") is None or r.get("state_id") == state_id]
 
         opportunities = [OpportunityBrief(**r) for r in rows]
@@ -59,10 +67,11 @@ def list_opportunities(
         )
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
+        logger.exception("Failed to retrieve opportunities from Supabase")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database query failed: {str(exc)}"
+            detail="Failed to retrieve opportunities from the database."
         )
 
 
@@ -88,10 +97,11 @@ def get_opportunity(opportunity_id: str, client: Client = Depends(get_supabase_c
         skills: list[SkillBrief] = []
         try:
             mapping_res = client.table("opportunity_skills").select(
-                "skill_id, is_primary, skills(id, name, sector, nsqf_level, qp_code)"
+                "skill_id, is_taught, priority, skills(id, name, sector, nsqf_level, qp_code)"
             ).eq("opportunity_id", opportunity_id).execute()
 
             for item in (mapping_res.data or []):
+                is_primary_val = (item.get("priority", 1) == 1)
                 skill_obj = item.get("skills")
                 if skill_obj and isinstance(skill_obj, dict):
                     skills.append(SkillBrief(
@@ -100,7 +110,7 @@ def get_opportunity(opportunity_id: str, client: Client = Depends(get_supabase_c
                         sector=skill_obj.get("sector"),
                         nsqf_level=skill_obj.get("nsqf_level"),
                         qp_code=skill_obj.get("qp_code"),
-                        is_primary=item.get("is_primary", True)
+                        is_primary=is_primary_val
                     ))
                 elif item.get("skill_id"):
                     # Direct lookup if relation not embedded
@@ -114,9 +124,10 @@ def get_opportunity(opportunity_id: str, client: Client = Depends(get_supabase_c
                             sector=s.get("sector"),
                             nsqf_level=s.get("nsqf_level"),
                             qp_code=s.get("qp_code"),
-                            is_primary=item.get("is_primary", True)
+                            is_primary=is_primary_val
                         ))
         except Exception:
+            logger.exception("Failed to retrieve mapped skills for opportunity")
             skills = []
 
         return OpportunityDetail(
@@ -139,8 +150,9 @@ def get_opportunity(opportunity_id: str, client: Client = Depends(get_supabase_c
         )
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
+        logger.exception("Failed to retrieve opportunity details")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch opportunity '{opportunity_id}': {str(exc)}"
+            detail="Failed to retrieve opportunity details from the database."
         )

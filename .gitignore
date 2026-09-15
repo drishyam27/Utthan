@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 backend/.env
+backend/.env.*
+!.env.example
+!backend/.env.example
 
 # Python artifacts
 __pycache__/
@@ -11,6 +14,10 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+venv/
+.venv/
+backend/venv/
+backend/.venv/
 
 
 # Large binaries & tools

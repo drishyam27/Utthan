@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS states (
     code VARCHAR(10) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
     type VARCHAR(20) NOT NULL DEFAULT 'state' CHECK (type IN ('state', 'union_territory')),
+    lgd_code INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS districts (
     state_id VARCHAR(32) NOT NULL REFERENCES states(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(20),
+    lgd_district_code INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_state_district_name UNIQUE (state_id, name)
 );
@@ -178,3 +180,15 @@ CREATE POLICY "Public insert interview_sessions" ON interview_sessions FOR INSER
 CREATE POLICY "Public select interview_sessions" ON interview_sessions FOR SELECT USING (true);
 
 CREATE POLICY "Public manage applications" ON applications FOR ALL USING (true);
+
+-- ============================================================================
+-- 10. ROLE PERMISSIONS FOR POSTGREST (service_role, anon, authenticated)
+-- ============================================================================
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;

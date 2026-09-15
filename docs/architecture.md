@@ -55,7 +55,7 @@
 
 * **Frontend**: Client-side React 19 Single Page Application with zero visual regressions.
 * **National Location Master**: Authoritative Government of India master based on Local Government Directory (LGD), Ministry of Panchayati Raj (`data/raw/lgd_districts.xls.xlsx`), canonicalized into `src/data/canonicalLocations.json`, exposed via `src/data/locations.js`, and seeded via `supabase/seed/02_all_india_districts.sql`. Remote Supabase execution is a separate manual step if not performed directly.
-* **Database Foundation**: Complete Supabase-compatible PostgreSQL schema and seed migrations created.
+* **Database Foundation**: Complete Supabase-compatible PostgreSQL schema and seed migrations created; Phase 2A live verification confirmed the configured project contains the expected 36 states/UTs, 784 districts, 7 opportunities, and mapped skills.
 * **Deterministic Matching Engine**: Fully implemented and validated via test cases.
 * **Temporary Fallback**: `src/data/mockOpportunities.js` is preserved as an in-memory fallback until Phase 3 connects the live database via the FastAPI backend.
 
