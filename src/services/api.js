@@ -56,3 +56,28 @@ export function fetchOpportunities({ stateId } = {}) {
 export function fetchOpportunity(opportunityId) {
   return request(`/api/opportunities/${encodeURIComponent(opportunityId)}`);
 }
+
+function capabilityHeaders(sessionToken) {
+  return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+}
+
+export function createBeneficiary(profile) {
+  return request('/api/beneficiaries', {
+    method: 'POST',
+    body: JSON.stringify(profile),
+  });
+}
+
+export function fetchBeneficiary(beneficiaryId, sessionToken) {
+  return request(`/api/beneficiaries/${encodeURIComponent(beneficiaryId)}`, {
+    headers: capabilityHeaders(sessionToken),
+  });
+}
+
+export function updateBeneficiary(beneficiaryId, sessionToken, profile) {
+  return request(`/api/beneficiaries/${encodeURIComponent(beneficiaryId)}`, {
+    method: 'PATCH',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify(profile),
+  });
+}

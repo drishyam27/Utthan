@@ -6,9 +6,9 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 2C-1 Complete — Data Contract & Schema Foundation Complete
-- **Current Development Phase**: Phase 2C-1 (Data Contract & Schema Foundation)
-- **Next Development Phase**: Phase 2C-2 (Beneficiary/Profile API)
+- **Status**: Phase 2C-2 Complete — Anonymous Beneficiary/Profile API Complete
+- **Current Development Phase**: Phase 2C-2 (Beneficiary/Profile API)
+- **Next Development Phase**: Phase 2C-3 (Interview Persistence)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
 - **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
@@ -29,7 +29,7 @@
 | **Recommendation Engine** | **COMPLETED** | Deterministic eligibility checks & weighted scoring in `recommendationEngine.js` | Connect to backend in Phase 3 |
 | **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & 784-district seed in `supabase/seed/02_all_india_districts.sql` | Verified in Supabase |
 | **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
-| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend live-verified against Supabase with health, location, automatic location-resolution, and opportunity routes | Add profile/recommendation APIs in a later phase |
+| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend with health, location, automatic location-resolution, opportunity, and anonymous beneficiary profile routes | Add interview/recommendation APIs in later phases |
 | **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
 
 ---
@@ -93,8 +93,14 @@
 - [x] Added focused Phase 2C-1 contract, security-helper, migration-assumption, and missing-location tests.
 - [x] Intentionally deferred beneficiary APIs, interview APIs, recommendation APIs, frontend persistence, and all AI/voice/authentication work.
 
-### ⏳ Phase 2C-2: Beneficiary/Profile API (NOT STARTED)
-- [ ] Implement session-bound beneficiary create, update, and retrieval APIs after contract review.
+### ✅ Phase 2C-2: Beneficiary/Profile API (COMPLETED)
+- [x] Added anonymous beneficiary create, retrieve, and partial-update endpoints with generic safe errors.
+- [x] Validated canonical State/District identifiers and rejected arbitrary or mismatched location pairs.
+- [x] Reused the Phase 2C-1 capability-token hash model with expiry, revocation, last-use tracking, and beneficiary ownership checks.
+- [x] Connected onboarding completion to beneficiary persistence and retained the capability in session-scoped browser storage.
+- [x] Restored the persisted beneficiary profile after refresh and connected existing profile editing to PATCH updates without redesigning the UI.
+- [x] Added backend API/security tests and frontend capability-storage coverage.
+- [x] Kept interview persistence, recommendation APIs, authentication, and AI/voice integration deferred.
 
 ### ⏳ Phase 2C-3: Interview Persistence (NOT STARTED)
 - [ ] Implement draft, resume, answer-save, completion, revision, and idempotency APIs.

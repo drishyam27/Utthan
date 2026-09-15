@@ -112,7 +112,9 @@ export default function ConversationPage({
   currentLanguage, 
   onSelectLanguage,
   onCompleteConversation,
-  onLocationResolved
+  onLocationResolved,
+  persistenceError,
+  isPersisting = false,
 }) {
   // 0 = Language, 1 = Name, 2 = Automatic Location, 3-6 = Interview, 7 = Complete
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -814,9 +816,10 @@ export default function ConversationPage({
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={() => onCompleteConversation(answers)}
-              className="px-6 py-3.5 rounded-full bg-[#134e40] hover:bg-[#0d3b30] text-white font-bold text-sm sm:text-base shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+              disabled={isPersisting}
+              className="px-6 py-3.5 rounded-full bg-[#134e40] hover:bg-[#0d3b30] disabled:opacity-60 text-white font-bold text-sm sm:text-base shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              <span>View Matched Opportunities (5)</span>
+              <span>{isPersisting ? 'Saving your profile...' : 'View Matched Opportunities (5)'}</span>
               <ArrowRight className="w-5 h-5" />
             </button>
 
@@ -837,6 +840,12 @@ export default function ConversationPage({
               <span>Start Over</span>
             </button>
           </div>
+
+          {persistenceError && (
+            <p className="mt-4 text-xs font-semibold text-[#7a3b0e]" role="alert">
+              {persistenceError}
+            </p>
+          )}
         </div>
       )}
 

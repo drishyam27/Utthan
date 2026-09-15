@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from './components/Navbar';
 import CulturalBackground from './components/CulturalBackground';
 import LandingPage from './pages/LandingPage';
@@ -13,6 +13,23 @@ import AdminDashboard from './pages/AdminDashboard';
 import { LANGUAGES } from './data/languages';
 import { INITIAL_USER_PROFILE } from './data/mockOpportunities';
 import { getUIText } from './data/uiTranslations';
+import {
+  createBeneficiary,
+  fetchBeneficiary,
+  updateBeneficiary,
+} from './services/api';
+import {
+  clearBeneficiarySession,
+  loadBeneficiarySession,
+  saveBeneficiarySession,
+} from './services/beneficiarySession';
+import {
+  EMPTY_USER_PROFILE,
+  toCreatePayload,
+  toResolvedLocation,
+  toUpdatePayload,
+  toUserProfile,
+} from './services/beneficiaryProfile';
 import { X } from 'lucide-react';
 
 export default function App() {
@@ -23,6 +40,37 @@ export default function App() {
   const [resolvedLocation, setResolvedLocation] = useState(null);
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const [initialPromptText, setInitialPromptText] = useState('');
+  const [beneficiarySession, setBeneficiarySession] = useState(loadBeneficiarySession);
+  const [profilePersistenceError, setProfilePersistenceError] = useState('');
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+
+  const clearInvalidBeneficiarySession = () => {
+    clearBeneficiarySession();
+    setBeneficiarySession(null);
+    setUserProfile(EMPTY_USER_PROFILE);
+    setResolvedLocation(null);
+    setCurrentPage('landing');
+  };
+
+  useEffect(() => {
+    const storedSession = loadBeneficiarySession();
+    if (!storedSession) return;
+
+    fetchBeneficiary(storedSession.beneficiaryId, storedSession.sessionToken)
+      .then((beneficiary) => {
+        setUserProfile(toUserProfile(beneficiary));
+        setResolvedLocation(toResolvedLocation(beneficiary));
+        const hydratedLanguage = LANGUAGES.find(item => item.id === beneficiary.preferred_language);
+        if (hydratedLanguage) setCurrentLanguage(hydratedLanguage);
+      })
+      .catch((error) => {
+        if (error?.status === 401 || error?.status === 403) {
+          clearInvalidBeneficiarySession();
+        } else {
+          setProfilePersistenceError('Your saved profile could not be restored right now.');
+        }
+      });
+  }, []);
 
   // Navigation handler
   const handleNavigate = (pageId) => {
@@ -48,37 +96,105 @@ export default function App() {
     setCurrentPage('conversation');
   };
 
+  const handleUpdateProfile = async (nextProfile) => {
+    if (!beneficiarySession) {
+      setUserProfile(nextProfile);
+      return nextProfile;
+    }
+
+    const updatePayload = toUpdatePayload(nextProfile, currentLanguage.id);
+    if (Object.keys(updatePayload).length === 0) return true;
+
+    setIsProfileSaving(true);
+    setProfilePersistenceError('');
+    try {
+      const beneficiary = await updateBeneficiary(
+        beneficiarySession.beneficiaryId,
+        beneficiarySession.sessionToken,
+        updatePayload,
+      );
+      setUserProfile(toUserProfile(beneficiary));
+      setResolvedLocation(toResolvedLocation(beneficiary));
+      return toUserProfile(beneficiary);
+    } catch (error) {
+      if (error?.status === 401 || error?.status === 403) {
+        clearInvalidBeneficiarySession();
+      }
+      setProfilePersistenceError('We could not save your profile changes. Please try again.');
+      return false;
+    } finally {
+      setIsProfileSaving(false);
+    }
+  };
+
   // Language selection callback
   const handleSelectLanguage = (lang) => {
     setCurrentLanguage(lang);
     setLanguageModalOpen(false);
     setUserProfile((prev) => ({ ...prev, preferredLanguage: lang.name }));
+
+    if (beneficiarySession) {
+      updateBeneficiary(
+        beneficiarySession.beneficiaryId,
+        beneficiarySession.sessionToken,
+        { preferred_language: lang.id },
+      ).then((beneficiary) => {
+        setUserProfile(toUserProfile(beneficiary));
+      }).catch((error) => {
+        if (error?.status === 401 || error?.status === 403) clearInvalidBeneficiarySession();
+        setProfilePersistenceError('Your language preference could not be saved right now.');
+      });
+    }
   };
 
   // Callback when AI conversation completes
-  const handleCompleteConversation = (answers) => {
-    if (answers.name?.trim()) {
-      setUserProfile((prev) => ({
-        ...prev,
-        fullName: answers.name.trim(),
-      }));
+  const handleCompleteConversation = async (answers) => {
+    const payload = toCreatePayload({
+      name: answers.name,
+      languageId: currentLanguage.id,
+      resolvedLocation: answers.location,
+    });
+
+    if (!payload) {
+      setProfilePersistenceError('Please provide your name and confirm your official location before continuing.');
+      return;
     }
 
-    if (answers.location?.state && answers.location?.district) {
-      setResolvedLocation(answers.location);
-      setUserProfile((prev) => ({
-        ...prev,
-        location: `${answers.location.district.name}, ${answers.location.state.name}`,
-      }));
-    }
+    setProfilePersistenceError('');
+    setIsProfileSaving(true);
+    try {
+      const response = beneficiarySession
+        ? { beneficiary: await updateBeneficiary(
+          beneficiarySession.beneficiaryId,
+          beneficiarySession.sessionToken,
+          payload,
+        ) }
+        : await createBeneficiary(payload);
 
-    if (answers.workInterest) {
-      setUserProfile((prev) => ({
-        ...prev,
-        interests: [answers.workInterest, ...prev.interests.filter(i => i !== answers.workInterest)]
-      }));
+      if (!beneficiarySession) {
+        const saved = saveBeneficiarySession({
+          beneficiaryId: response.beneficiary.id,
+          sessionToken: response.session_token,
+        });
+        if (!saved) {
+          setProfilePersistenceError('Your profile was created, but this browser could not retain the session safely.');
+          return;
+        }
+        setBeneficiarySession({
+          beneficiaryId: response.beneficiary.id,
+          sessionToken: response.session_token,
+        });
+      }
+
+      setUserProfile(toUserProfile(response.beneficiary));
+      setResolvedLocation(toResolvedLocation(response.beneficiary));
+      setCurrentPage('opportunities');
+    } catch (error) {
+      if (error?.status === 401 || error?.status === 403) clearInvalidBeneficiarySession();
+      setProfilePersistenceError('We could not save your beneficiary profile. Please try again.');
+    } finally {
+      setIsProfileSaving(false);
     }
-    setCurrentPage('opportunities');
   };
 
   // Select opportunity for details view
@@ -137,14 +253,19 @@ export default function App() {
             onCompleteConversation={handleCompleteConversation}
             onLocationResolved={setResolvedLocation}
             onNavigate={handleNavigate}
+            persistenceError={profilePersistenceError}
+            isPersisting={isProfileSaving}
           />
         )}
 
         {currentPage === 'profile' && (
           <ProfilePage
             userProfile={userProfile}
-            onUpdateProfile={setUserProfile}
+            onUpdateProfile={handleUpdateProfile}
             onNavigate={handleNavigate}
+            saveError={profilePersistenceError}
+            isSaving={isProfileSaving}
+            isPersistedBeneficiary={Boolean(beneficiarySession)}
           />
         )}
 

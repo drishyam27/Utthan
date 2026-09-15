@@ -111,6 +111,18 @@ Phase 2C-1 prepares contracts and database structure without exposing new API ro
 
 Phase 2C-1 intentionally does not implement beneficiary APIs, interview APIs, recommendation APIs, frontend persistence, authentication, or AI/voice providers.
 
+#### Phase 2C-2 Anonymous Beneficiary Profile API
+
+Phase 2C-2 connects the existing onboarding/profile flow to the Phase 2C-1 persistence boundary:
+
+1. `POST /api/beneficiaries` validates the onboarding name, language, and canonical State/District IDs, creates the beneficiary, and returns the opaque capability token once.
+2. `GET /api/beneficiaries/{id}` and `PATCH /api/beneficiaries/{id}` require `Authorization: Bearer <capability-token>`. The token is hashed for lookup, checked for expiry/revocation, and must belong to the requested beneficiary.
+3. The backend uses the service-role Supabase client. Public beneficiary access is not restored and the service-role key never reaches the browser.
+4. The frontend stores only the anonymous session capability and beneficiary ID in browser `sessionStorage`, hydrates the profile after refresh, and clears the capability on an unauthorized response. It uses the existing `VITE_API_BASE_URL` configuration; no new frontend secret is required.
+5. Profile updates use an allowlist of beneficiary fields. Canonical State/District relationships are validated server-side; raw coordinates and interview answers are not persisted in this phase.
+
+The Phase 2C-1 migration must be applied manually before these endpoints can persist against a live Supabase project. Phase 2C-3 interview persistence, recommendation APIs, authentication, and AI/voice integration remain deferred.
+
 #### Security Boundary & Credential Isolation Rules
 1. **Server-Side Exclusivity**: `SUPABASE_SERVICE_ROLE_KEY` and backend secrets are loaded exclusively by the Python FastAPI server (`backend/app/core/config.py`).
 2. **Zero Frontend Secret Exposure**: Browser JavaScript and React frontend bundles NEVER receive the service-role key. No `VITE_` variable may ever be created for the service-role key.

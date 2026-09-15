@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node tests/matchingEngine.test.js && node tests/dataValidation.test.js",
+    "test": "node tests/matchingEngine.test.js && node tests/dataValidation.test.js && node tests/beneficiarySession.test.js && node tests/beneficiaryProfile.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -4,14 +4,17 @@ import {
   Compass, CheckCircle, Edit3, Save, Plus, X, ArrowRight, ShieldCheck 
 } from 'lucide-react';
 
-export default function ProfilePage({ userProfile, onUpdateProfile, onNavigate }) {
+export default function ProfilePage({ userProfile, onUpdateProfile, onNavigate, saveError, isSaving = false, isPersistedBeneficiary = false }) {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState(userProfile);
   const [newSkill, setNewSkill] = useState('');
 
-  const handleSave = () => {
-    setIsEditing(false);
-    onUpdateProfile(profile);
+  const handleSave = async () => {
+    const saved = await onUpdateProfile(profile);
+    if (saved !== false) {
+      if (saved && typeof saved === 'object') setProfile(saved);
+      setIsEditing(false);
+    }
   };
 
   const addSkill = () => {
@@ -57,10 +60,11 @@ export default function ProfilePage({ userProfile, onUpdateProfile, onNavigate }
           {isEditing ? (
             <button
               onClick={handleSave}
+              disabled={isSaving}
               className="px-4 py-2 rounded-full bg-[#134e40] text-white text-sm font-medium flex items-center gap-2 shadow-sm hover:bg-[#0d3b30]"
             >
               <Save className="w-4 h-4" />
-              <span>Save Changes</span>
+              <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
             </button>
           ) : (
             <button
@@ -143,7 +147,7 @@ export default function ProfilePage({ userProfile, onUpdateProfile, onNavigate }
                 <input
                   type="text"
                   value={profile.location}
-                  onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                  readOnly
                   className="w-full text-sm font-medium text-[#263238] border border-[#cbd5e1] rounded-lg p-2 bg-[#FAF7F0]"
                 />
               ) : (
@@ -175,6 +179,12 @@ export default function ProfilePage({ userProfile, onUpdateProfile, onNavigate }
         </div>
       </div>
 
+      {saveError && (
+        <p className="mb-6 text-xs font-semibold text-[#7a3b0e]" role="alert">
+          {saveError}
+        </p>
+      )}
+
       {/* 3. Skills Section */}
       <div className="bg-white/90 rounded-2xl p-6 border border-[#b8ded6] shadow-sm mb-6">
         <div className="flex items-center gap-3 mb-4">
@@ -194,7 +204,7 @@ export default function ProfilePage({ userProfile, onUpdateProfile, onNavigate }
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#134e40]/10 text-[#134e40] font-medium text-sm border border-[#134e40]/20"
             >
               <span>{skill}</span>
-              {isEditing && (
+              {isEditing && !isPersistedBeneficiary && (
                 <button
                   onClick={() => removeSkill(skill)}
                   className="p-0.5 hover:text-red-600 rounded-full"
@@ -207,7 +217,7 @@ export default function ProfilePage({ userProfile, onUpdateProfile, onNavigate }
           ))}
         </div>
 
-        {isEditing && (
+        {isEditing && !isPersistedBeneficiary && (
           <div className="flex items-center gap-2 mt-3 max-w-sm">
             <input
               type="text"
@@ -224,6 +234,12 @@ export default function ProfilePage({ userProfile, onUpdateProfile, onNavigate }
               <span>Add</span>
             </button>
           </div>
+        )}
+
+        {isEditing && isPersistedBeneficiary && (
+          <p className="mt-3 text-xs text-[#718078]">
+            Skills persistence will be added in a later phase.
+          </p>
         )}
       </div>
 

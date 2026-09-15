@@ -3,7 +3,7 @@
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 LanguageCode = Literal[
@@ -44,3 +44,42 @@ class BeneficiarySessionProfile(BaseModel):
     current_occupation: Optional[str] = Field(None, max_length=150)
     mobility_preference: Optional[MobilityPreference] = "within_15km"
     primary_goal: Optional[PrimaryGoal] = "training_stipend"
+
+
+class BeneficiaryCreateRequest(BaseModel):
+    """Required onboarding fields for creating an anonymous beneficiary."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(..., min_length=1, max_length=150)
+    preferred_language: LanguageCode = "hi"
+    state_id: str = Field(..., min_length=1, max_length=32)
+    district_id: str = Field(..., min_length=1, max_length=64)
+
+
+class BeneficiaryUpdateRequest(BaseModel):
+    """Allowlisted partial profile update fields."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[str] = Field(None, min_length=1, max_length=150)
+    preferred_language: Optional[LanguageCode] = None
+    state_id: Optional[str] = Field(None, min_length=1, max_length=32)
+    district_id: Optional[str] = Field(None, min_length=1, max_length=64)
+    education_level: Optional[EducationLevel] = None
+    current_occupation: Optional[str] = Field(None, max_length=150)
+    mobility_preference: Optional[MobilityPreference] = None
+    primary_goal: Optional[PrimaryGoal] = None
+
+    @model_validator(mode="after")
+    def require_an_update(self):
+        if not self.model_fields_set:
+            raise ValueError("at least one profile field is required")
+        return self
+
+
+class BeneficiaryCreateResponse(BaseModel):
+    """Creation response; session_token is returned only at creation time."""
+
+    beneficiary: BeneficiaryProfileContract
+    session_token: str = Field(..., min_length=40)
