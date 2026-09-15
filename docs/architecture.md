@@ -98,6 +98,19 @@
 4. The resolver rejects unsupported, unavailable, ambiguous, outside-India, or non-canonical results. State and District names must match exactly one record in the Supabase LGD master before canonical IDs are returned.
 5. The frontend uses only the canonical State/District response for the opportunity filter and user-facing location display.
 
+#### Phase 2C-1 Data and Security Foundation
+
+Phase 2C-1 prepares contracts and database structure without exposing new API routes or changing the frontend flow:
+
+1. Stable beneficiary fields remain the existing name, language, canonical State/District IDs, education, occupation, mobility, and primary goal values.
+2. `interview_sessions` retains structured JSON answers and gains draft/completed status, revision, timestamps, and nullable extracted-profile JSON for later deterministic extraction.
+3. `beneficiary_sessions` stores only a server-side hash of a high-entropy anonymous capability token, with expiry, rotation, last-use, and revocation metadata. Raw tokens are never stored or logged.
+4. Beneficiary, interview, capability-session, and application tables are private to the FastAPI service-role boundary. Existing public catalog reads for states, districts, skills, opportunities, and opportunity-skills remain available.
+5. Recommendation responses have a typed contract for eligibility, score, matched/unmet criteria, reasons, NSQF level, QP code, and verified skill metadata. Live recommendation APIs remain deferred.
+6. The deterministic matcher rejects restricted opportunities when canonical beneficiary location is missing; no location is inferred.
+
+Phase 2C-1 intentionally does not implement beneficiary APIs, interview APIs, recommendation APIs, frontend persistence, authentication, or AI/voice providers.
+
 #### Security Boundary & Credential Isolation Rules
 1. **Server-Side Exclusivity**: `SUPABASE_SERVICE_ROLE_KEY` and backend secrets are loaded exclusively by the Python FastAPI server (`backend/app/core/config.py`).
 2. **Zero Frontend Secret Exposure**: Browser JavaScript and React frontend bundles NEVER receive the service-role key. No `VITE_` variable may ever be created for the service-role key.

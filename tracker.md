@@ -6,9 +6,9 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 2B Complete — Automatic Location Detection & React/FastAPI Integration Complete
-- **Current Development Phase**: Phase 2 (FastAPI Backend / API Foundation)
-- **Next Development Phase**: Phase 3 (Adaptive Voice Interview & Profile Extraction)
+- **Status**: Phase 2C-1 Complete — Data Contract & Schema Foundation Complete
+- **Current Development Phase**: Phase 2C-1 (Data Contract & Schema Foundation)
+- **Next Development Phase**: Phase 2C-2 (Beneficiary/Profile API)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
 - **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
@@ -82,6 +82,25 @@
 - [x] Preserved the existing visual design and retained `mockOpportunities.js` only for the existing admin/demo surface that still imports it.
 - [x] Added mocked-provider backend coverage for valid, malformed, unresolved, ambiguous, outside-India, and provider-failure cases.
 - [x] Verified backend tests, frontend tests, lint, production build, and live API contract checks.
+
+### ✅ Phase 2C-1: Data Contract & Schema Foundation (COMPLETED)
+- [x] Added typed backend contracts for beneficiary profiles, interview lifecycle, anonymous sessions, and deterministic recommendation responses.
+- [x] Added an additive migration for interview status, revision, completion timestamp, extracted profile JSON, and anonymous capability sessions.
+- [x] Restricted direct anonymous/authenticated access to beneficiary, interview, session, and application persistence tables; catalog read policies remain unchanged.
+- [x] Added high-entropy anonymous capability token generation and server-side SHA-256 hash verification helpers without API or login implementation.
+- [x] Enforced the existing application categorical values in backend contracts and database constraints.
+- [x] Corrected deterministic recommendation behavior so restricted opportunities require canonical beneficiary State/District identifiers.
+- [x] Added focused Phase 2C-1 contract, security-helper, migration-assumption, and missing-location tests.
+- [x] Intentionally deferred beneficiary APIs, interview APIs, recommendation APIs, frontend persistence, and all AI/voice/authentication work.
+
+### ⏳ Phase 2C-2: Beneficiary/Profile API (NOT STARTED)
+- [ ] Implement session-bound beneficiary create, update, and retrieval APIs after contract review.
+
+### ⏳ Phase 2C-3: Interview Persistence (NOT STARTED)
+- [ ] Implement draft, resume, answer-save, completion, revision, and idempotency APIs.
+
+### ⏳ Phase 2C-4: Deterministic Recommendation Service (NOT STARTED)
+- [ ] Move the verified matching logic behind a single backend recommendation service.
 
 ### ⏳ Phase 2C: Profile, Recommendation & AI Backend Integration (NOT STARTED)
 - [ ] Connect the resolved canonical location and interview profile to deterministic backend recommendations.

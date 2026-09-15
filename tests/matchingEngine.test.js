@@ -76,6 +76,23 @@ assert(geoCheck.eligible === false, 'Regional scheme correctly marks cross-state
 assert(geoCheck.unmetCriteria.some(c => c.includes('state-up')), 'Explicit reason identifies required state jurisdiction');
 
 // ----------------------------------------------------------------------------
+// TEST CASE 2B: Missing Canonical Location
+// Restricted opportunities must never qualify without verified State/District IDs.
+// ----------------------------------------------------------------------------
+console.log('\nTest Case 2B: Missing Canonical Location Scenario');
+const beneficiaryMissingLocation = {
+  name: 'Unresolved Citizen',
+  trade: 'handloom weaving',
+  education: '10th Pass',
+  mobility: 'district_wide',
+  age: 28
+};
+
+const missingLocationCheck = checkHardEligibility(beneficiaryMissingLocation, varanasiOpp);
+assert(missingLocationCheck.eligible === false, 'Restricted scheme rejects beneficiary without canonical location');
+assert(missingLocationCheck.unmetCriteria.some(c => c.includes('Canonical State and District')), 'Missing-location reason requires canonical State and District IDs');
+
+// ----------------------------------------------------------------------------
 // TEST CASE 3: Education Mismatch
 // Drone Pilot requires minimum 10th Pass. Beneficiary has no formal schooling.
 // ----------------------------------------------------------------------------

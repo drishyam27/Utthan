@@ -60,9 +60,14 @@ export function checkHardEligibility(beneficiary = {}, opportunity = {}) {
   // 1. Geographic Check (State & District)
   const isPanIndia = rules.panIndia !== false && !opportunity.stateId;
   if (!isPanIndia) {
-    if (opportunity.stateId && beneficiary.stateId && beneficiary.stateId !== opportunity.stateId) {
+    const missingCanonicalLocation = !beneficiary.stateId
+      || (opportunity.districtId && !beneficiary.districtId);
+
+    if (missingCanonicalLocation) {
+      unmetCriteria.push('Canonical State and District location is required for this restricted opportunity');
+    } else if (opportunity.stateId && beneficiary.stateId !== opportunity.stateId) {
       unmetCriteria.push(`Location restricted to state: ${opportunity.stateId}`);
-    } else if (opportunity.districtId && beneficiary.districtId && beneficiary.districtId !== opportunity.districtId) {
+    } else if (opportunity.districtId && beneficiary.districtId !== opportunity.districtId) {
       unmetCriteria.push(`Location restricted to district: ${opportunity.districtId}`);
     } else {
       matchedCriteria.push('Geographic location matches program jurisdiction');
