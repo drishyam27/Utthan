@@ -57,11 +57,11 @@
 * **National Location Master**: Authoritative Government of India master based on Local Government Directory (LGD), Ministry of Panchayati Raj (`data/raw/lgd_districts.xls.xlsx`), canonicalized into `src/data/canonicalLocations.json`, exposed via `src/data/locations.js`, and seeded via `supabase/seed/02_all_india_districts.sql`. Remote Supabase execution is a separate manual step if not performed directly.
 * **Database Foundation**: Complete Supabase-compatible PostgreSQL schema and seed migrations created; Phase 2A live verification confirmed the configured project contains the expected 36 states/UTs, 784 districts, 7 opportunities, and mapped skills.
 * **Deterministic Matching Engine**: Fully implemented and validated via test cases.
-* **Temporary Fallback**: `src/data/mockOpportunities.js` is preserved as an in-memory fallback until Phase 3 connects the live database via the FastAPI backend.
+* **Temporary Fallback**: `src/data/mockOpportunities.js` remains preserved for the existing admin/demo surface; the citizen opportunity list and detail flow now use FastAPI.
 
 ---
 
-### Implemented Backend Architecture (Phase 2 Implemented)
+### Implemented Backend Architecture (Phase 2B Implemented)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -76,7 +76,8 @@
 │                     (backend/app/main.py)                   │
 │                                                             │
 │ • Health Routes:         /api/health, /api/health/db        │
-│ • Location Routes:       /api/locations/states, districts   │
+│ • Location Routes:       /api/locations/states, districts,  │
+│                          /api/locations/resolve             │
 │ • Opportunities Routes:  /api/opportunities, /{id}          │
 │ • Security Boundary:     Service Role Key isolated on server│
 │ • OpenAPI Documentation: /docs, /redoc                      │
@@ -88,6 +89,14 @@
 │ (36 States, 784 Districts, 11 Skills, 7 Opportunities, RLS) │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+#### Automatic Location Resolution (Phase 2B)
+
+1. The React onboarding flow collects a transient display name, then requests browser geolocation only when the user reaches the location step and explicitly taps the location-access button.
+2. Latitude, longitude, and optional accuracy are sent transiently to `POST /api/locations/resolve`; raw coordinates are not persisted, placed in browser storage, echoed in responses, or logged by the application.
+3. FastAPI delegates reverse geocoding through a provider adapter. The development default is a configurable Nominatim adapter using `httpx`; production requires an approved provider and any associated credentials/configuration.
+4. The resolver rejects unsupported, unavailable, ambiguous, outside-India, or non-canonical results. State and District names must match exactly one record in the Supabase LGD master before canonical IDs are returned.
+5. The frontend uses only the canonical State/District response for the opportunity filter and user-facing location display.
 
 #### Security Boundary & Credential Isolation Rules
 1. **Server-Side Exclusivity**: `SUPABASE_SERVICE_ROLE_KEY` and backend secrets are loaded exclusively by the Python FastAPI server (`backend/app/core/config.py`).

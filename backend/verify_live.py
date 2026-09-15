@@ -73,6 +73,17 @@ openapi = r_openapi.json()
 print("OpenAPI paths registered:", list(openapi.get("paths", {}).keys()))
 assert "/api/health" in openapi["paths"]
 assert "/api/locations/states" in openapi["paths"]
+assert "/api/locations/resolve" in openapi["paths"]
 assert "/api/opportunities" in openapi["paths"]
+
+print("\n--- STEP 12: LOCATION RESOLUTION CONTRACT ---")
+r_invalid_resolve = httpx.post(
+    f"{base}/api/locations/resolve",
+    json={"latitude": 91, "longitude": 0},
+)
+print("Invalid location payload:", r_invalid_resolve.status_code, r_invalid_resolve.json())
+assert r_invalid_resolve.status_code == 422
+assert "service_role" not in r_invalid_resolve.text.lower()
+assert "traceback" not in r_invalid_resolve.text.lower()
 
 print("\n[SUCCESS] ALL LIVE VERIFICATION CHECKS PASSED WITH 100% SUCCESS!")

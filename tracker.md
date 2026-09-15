@@ -6,7 +6,7 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 2A Complete — FastAPI Backend / Supabase Live Verification & Stabilization Complete
+- **Status**: Phase 2B Complete — Automatic Location Detection & React/FastAPI Integration Complete
 - **Current Development Phase**: Phase 2 (FastAPI Backend / API Foundation)
 - **Next Development Phase**: Phase 3 (Adaptive Voice Interview & Profile Extraction)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
@@ -23,13 +23,13 @@
 | **Multilingual UI (23 Langs)** | **COMPLETED** | UI translations dictionary and native scripts active | Maintain and keep synced |
 | **Voice Playback (TTS)** | **PARTIALLY COMPLETED** | Sarvam AI Bulbul:v3 active for 11 languages; browser fallback for 12 | Expand coverage in voice service |
 | **Voice Input (STT)** | **PARTIALLY COMPLETED** | Native browser Web Speech API (Chromium-supported) | Evaluate Bhashini / Sarvam STT |
-| **State & District Dataset** | **COMPLETED** | Authoritative 36 States/UTs & 784 districts from LGD master in `canonicalLocations.json` & `locations.js` | Connect to onboarding UI in Phase 3 |
+| **State & District Dataset** | **COMPLETED** | Authoritative 36 States/UTs & 784 districts from LGD master in `canonicalLocations.json` & `locations.js`; automatic resolution validates against the same Supabase master | Use canonical IDs in later profile/recommendation work |
 | **Verified Opportunities Data**| **COMPLETED** | 7 verified government schemes with NSQF & portal source links | Served via `/api/opportunities` |
 | **Skills Catalog (NSQF)** | **COMPLETED** | 11 standardized skills with official SSC QP codes & levels | Embedded in opportunity details |
 | **Recommendation Engine** | **COMPLETED** | Deterministic eligibility checks & weighted scoring in `recommendationEngine.js` | Connect to backend in Phase 3 |
 | **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & 784-district seed in `supabase/seed/02_all_india_districts.sql` | Verified in Supabase |
 | **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
-| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend live-verified against Supabase with health, location, and opportunity routes | Connect to React frontend in Phase 3 |
+| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend live-verified against Supabase with health, location, automatic location-resolution, and opportunity routes | Add profile/recommendation APIs in a later phase |
 | **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
 
 ---
@@ -73,6 +73,20 @@
 - [x] Sanitized production-facing backend error responses and added server-side exception logging.
 - [x] Standardized backend test fixtures on the production `priority` mapping field.
 - [x] Confirmed frontend/backend integration remains intentionally pending for a later phase.
+
+### ✅ Phase 2B: Automatic Location Detection & React/FastAPI Integration (COMPLETED)
+- [x] Added the minimal Language → Name → Location onboarding sequence; geolocation is user-triggered and normal onboarding does not ask beneficiaries to manually select State/District.
+- [x] Added `POST /api/locations/resolve` with strict coordinate validation, provider abstraction, generic failure handling, and exact LGD/Supabase State/District validation.
+- [x] Kept raw latitude/longitude transient: no persistence, browser storage, response echo, or coordinate logging.
+- [x] Added the `VITE_API_BASE_URL` frontend API client and connected live opportunities list/detail screens to FastAPI without production mock fallback.
+- [x] Preserved the existing visual design and retained `mockOpportunities.js` only for the existing admin/demo surface that still imports it.
+- [x] Added mocked-provider backend coverage for valid, malformed, unresolved, ambiguous, outside-India, and provider-failure cases.
+- [x] Verified backend tests, frontend tests, lint, production build, and live API contract checks.
+
+### ⏳ Phase 2C: Profile, Recommendation & AI Backend Integration (NOT STARTED)
+- [ ] Connect the resolved canonical location and interview profile to deterministic backend recommendations.
+- [ ] Add server-side profile persistence and authentication boundaries.
+- [ ] Move approved AI/voice provider integrations behind the backend gateway.
 
 ### ⏳ Phase 3: Adaptive Voice Interview & Profile Extraction (NOT STARTED)
 - [ ] Onboarding flow capturing Beneficiary Name, State, and District.

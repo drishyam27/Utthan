@@ -8,11 +8,62 @@ import logging
 from fastapi import APIRouter, HTTPException, status, Depends
 from supabase import Client
 from app.db.supabase import get_supabase_client
-from app.schemas.location import StateResponse, StateDistrictsResponse, DistrictResponse
+from app.schemas.location import (
+    StateResponse,
+    StateDistrictsResponse,
+    DistrictResponse,
+    LocationResolveRequest,
+    ResolvedLocationResponse,
+)
 from app.schemas.common import ErrorResponse
+from app.services.location_resolution import (
+    AmbiguousLocationError,
+    LocationProviderError,
+    LocationResolutionError,
+    LocationResolver,
+    get_reverse_geocoder,
+)
 
 router = APIRouter(prefix="/locations", tags=["Locations"])
 logger = logging.getLogger(__name__)
+
+
+@router.post(
+    "/resolve",
+    response_model=ResolvedLocationResponse,
+    responses={
+        422: {"model": ErrorResponse, "description": "Location could not be mapped to one canonical LGD district"},
+        503: {"model": ErrorResponse, "description": "Location provider unavailable"},
+    },
+    summary="Resolve browser coordinates to canonical LGD location",
+    description=(
+        "Reverse-resolves transient browser coordinates and validates the result "
+        "against the authoritative Supabase LGD state and district master."
+    ),
+)
+def resolve_location(
+    payload: LocationResolveRequest,
+    client: Client = Depends(get_supabase_client),
+    geocoder=Depends(get_reverse_geocoder),
+):
+    try:
+        resolver = LocationResolver(client=client, geocoder=geocoder)
+        return resolver.resolve(
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+        )
+    except LocationProviderError:
+        logger.warning("Location resolution provider unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Location service is temporarily unavailable. Please try again.",
+        )
+    except (LocationResolutionError, AmbiguousLocationError):
+        logger.info("Location could not be mapped to one canonical LGD district")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="We could not confirm one official State and District for this location.",
+        )
 
 
 @router.get(

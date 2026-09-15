@@ -37,7 +37,8 @@ def list_opportunities(
         query = client.table("opportunities").select(
             "id, title, category, provider, source, source_url, "
             "state_id, district_id, education_min, age_min, age_max, "
-            "mobility_requirement, stipend, duration"
+            "mobility_requirement, stipend, duration, expected_earnings, "
+            "overview, nsqf_level, qp_code, application_url, eligibility_rules, action_steps"
         )
 
         if category:
@@ -146,6 +147,12 @@ def get_opportunity(opportunity_id: str, client: Client = Depends(get_supabase_c
             stipend=opp_data.get("stipend"),
             expected_earnings=opp_data.get("expected_earnings"),
             duration=opp_data.get("duration"),
+            overview=opp_data.get("overview"),
+            nsqf_level=opp_data.get("nsqf_level"),
+            qp_code=opp_data.get("qp_code"),
+            application_url=opp_data.get("application_url"),
+            eligibility_rules=opp_data.get("eligibility_rules"),
+            action_steps=opp_data.get("action_steps"),
             skills=skills
         )
     except HTTPException:

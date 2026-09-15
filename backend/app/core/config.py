@@ -36,6 +36,22 @@ class Settings:
     # Frontend origin for CORS
     FRONTEND_ORIGIN: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173").strip()
 
+    # Location resolution provider. Nominatim is a development-compatible,
+    # configurable default; production deployments should select an approved
+    # provider and review its usage policy before enabling it.
+    LOCATION_PROVIDER: str = os.getenv("LOCATION_PROVIDER", "nominatim").strip().lower()
+    LOCATION_REVERSE_GEOCODER_URL: str = os.getenv(
+        "LOCATION_REVERSE_GEOCODER_URL",
+        "https://nominatim.openstreetmap.org/reverse"
+    ).strip()
+    LOCATION_PROVIDER_USER_AGENT: str = os.getenv(
+        "LOCATION_PROVIDER_USER_AGENT",
+        "Utthan/2B location resolver"
+    ).strip()
+    LOCATION_PROVIDER_TIMEOUT_SECONDS: float = float(
+        os.getenv("LOCATION_PROVIDER_TIMEOUT_SECONDS", "8")
+    )
+
     @property
     def is_supabase_configured(self) -> bool:
         """Returns True if Supabase credentials are provided and non-placeholder."""

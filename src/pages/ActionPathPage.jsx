@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
-import { CheckCircle2, Circle, Clock, ArrowRight, Award, Sparkles, MapPin, PhoneCall } from 'lucide-react';
-import { MOCK_OPPORTUNITIES } from '../data/mockOpportunities';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, Clock, Sparkles, MapPin, PhoneCall } from 'lucide-react';
 
-export default function ActionPathPage({ opportunity = MOCK_OPPORTUNITIES[0], onNavigate }) {
-  const [steps, setSteps] = useState(opportunity?.actionSteps || MOCK_OPPORTUNITIES[0].actionSteps);
+export default function ActionPathPage({ opportunity, onNavigate }) {
+  const [steps, setSteps] = useState(opportunity?.actionSteps || []);
+
+  useEffect(() => {
+    setSteps(opportunity?.actionSteps || []);
+  }, [opportunity]);
 
   const toggleStep = (index) => {
     const updated = [...steps];
+    if (!updated[index]) return;
     if (updated[index].status === 'completed') {
       updated[index].status = 'current';
     } else {
@@ -33,6 +37,7 @@ export default function ActionPathPage({ opportunity = MOCK_OPPORTUNITIES[0], on
 
       {/* 2. Visual Timeline Pathway */}
       <div className="bg-white/95 rounded-3xl p-6 sm:p-8 border border-[#b8ded6] shadow-sm mb-8">
+        {steps.length === 0 && <p className="text-sm text-[#718078]">No action roadmap is available for this opportunity yet.</p>}
         <div className="relative pl-6 sm:pl-8 border-l-2 border-[#134e40]/30 space-y-8 my-2">
           {steps.map((item, index) => {
             const isCompleted = item.status === 'completed';
@@ -89,9 +94,9 @@ export default function ActionPathPage({ opportunity = MOCK_OPPORTUNITIES[0], on
 
                   {isCurrent && (
                     <div className="mt-3 pt-3 border-t border-[#b8ded6]/60 flex items-center justify-between">
-                      <span className="text-xs text-[#134e40] font-medium flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5" /> Nearest Center: Varanasi ITI Campus
-                      </span>
+                      {opportunity?.location && <span className="text-xs text-[#134e40] font-medium flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5" /> Program location: {opportunity.location}
+                      </span>}
                       <button
                         onClick={() => toggleStep(index)}
                         className="px-3 py-1 bg-[#134e40] text-white rounded-full text-xs font-semibold hover:bg-[#0d3b30]"

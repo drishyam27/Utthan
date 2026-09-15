@@ -11,7 +11,7 @@ import ActionPathPage from './pages/ActionPathPage';
 import HowToUsePage from './pages/HowToUsePage';
 import AdminDashboard from './pages/AdminDashboard';
 import { LANGUAGES } from './data/languages';
-import { INITIAL_USER_PROFILE, MOCK_OPPORTUNITIES } from './data/mockOpportunities';
+import { INITIAL_USER_PROFILE } from './data/mockOpportunities';
 import { getUIText } from './data/uiTranslations';
 import { X } from 'lucide-react';
 
@@ -19,7 +19,8 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [currentLanguage, setCurrentLanguage] = useState(LANGUAGES[0]); // English default matching reference
   const [userProfile, setUserProfile] = useState(INITIAL_USER_PROFILE);
-  const [selectedOpportunity, setSelectedOpportunity] = useState(MOCK_OPPORTUNITIES[0]);
+  const [selectedOpportunity, setSelectedOpportunity] = useState(null);
+  const [resolvedLocation, setResolvedLocation] = useState(null);
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const [initialPromptText, setInitialPromptText] = useState('');
 
@@ -56,6 +57,21 @@ export default function App() {
 
   // Callback when AI conversation completes
   const handleCompleteConversation = (answers) => {
+    if (answers.name?.trim()) {
+      setUserProfile((prev) => ({
+        ...prev,
+        fullName: answers.name.trim(),
+      }));
+    }
+
+    if (answers.location?.state && answers.location?.district) {
+      setResolvedLocation(answers.location);
+      setUserProfile((prev) => ({
+        ...prev,
+        location: `${answers.location.district.name}, ${answers.location.state.name}`,
+      }));
+    }
+
     if (answers.workInterest) {
       setUserProfile((prev) => ({
         ...prev,
@@ -119,6 +135,7 @@ export default function App() {
             onSelectLanguage={handleSelectLanguage}
             initialPrompt={initialPromptText}
             onCompleteConversation={handleCompleteConversation}
+            onLocationResolved={setResolvedLocation}
             onNavigate={handleNavigate}
           />
         )}
@@ -134,8 +151,8 @@ export default function App() {
         {currentPage === 'opportunities' && (
           <OpportunitiesPage
             currentLanguage={currentLanguage}
+            stateId={resolvedLocation?.state?.id}
             onSelectOpportunity={handleSelectOpportunity}
-            onNavigate={handleNavigate}
           />
         )}
 

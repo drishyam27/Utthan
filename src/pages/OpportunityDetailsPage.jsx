@@ -1,18 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
-  ArrowLeft, CheckCircle2, AlertCircle, Award, 
-  MapPin, Calendar, IndianRupee, ArrowRight, ShieldCheck, Sparkles 
+  ArrowLeft, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Sparkles
 } from 'lucide-react';
 import { getUIText } from '../data/uiTranslations';
+import { ApiError, fetchOpportunity } from '../services/api';
+import { mapOpportunity } from '../services/opportunityAdapter';
 
 export default function OpportunityDetailsPage({ 
   currentLanguage,
-  opportunity, 
+  opportunity: initialOpportunity,
   onBack, 
   onStartActionPath 
 }) {
-  if (!opportunity) return null;
+  const [loadedOpportunity, setLoadedOpportunity] = useState(initialOpportunity);
+  const [loading, setLoading] = useState(Boolean(initialOpportunity?.id));
+  const [error, setError] = useState('');
   const langId = currentLanguage?.id || 'en';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!initialOpportunity?.id) return undefined;
+
+    setLoadedOpportunity(initialOpportunity);
+    setLoading(true);
+    setError('');
+    fetchOpportunity(initialOpportunity.id)
+      .then((payload) => {
+        if (!cancelled) setLoadedOpportunity(mapOpportunity(payload));
+      })
+      .catch((requestError) => {
+        if (!cancelled) {
+          setError(requestError instanceof ApiError ? requestError.message : 'Opportunity details could not be loaded.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialOpportunity]);
+
+  const opportunity = loadedOpportunity;
+  if (!opportunity) return null;
 
   return (
     <div className="relative z-20 flex-1 px-4 sm:px-6 lg:px-12 py-8 max-w-4xl mx-auto w-full">
@@ -25,27 +56,26 @@ export default function OpportunityDetailsPage({
         <span>{getUIText('details', 'backToOpps', langId)}</span>
       </button>
 
+      {loading && <p className="text-xs text-[#718078] mb-4">Loading verified opportunity details...</p>}
+      {error && <div className="mb-4 p-3 rounded-xl bg-[#FFF8EE] border border-[#FAD7AB] text-xs text-[#7a3b0e]">{error}</div>}
+
       {/* Main Banner Card */}
       <div className="bg-white/95 rounded-3xl p-6 sm:p-8 border border-[#b8ded6] shadow-sm mb-8">
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300">
+          {typeof opportunity.matchScore === 'number' && <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300">
             ★ {opportunity.matchScore}% {getUIText('details', 'matchBadge', langId)}
-          </span>
+          </span>}
           <span className="text-xs font-medium text-[#718078] bg-[#FAF7F0] px-3 py-1 rounded-full border border-[#cbd5e1]">
             {opportunity.category}
           </span>
-          <span className="text-xs text-[#134e40] font-semibold">
-            {opportunity.partner}
-          </span>
+          {opportunity.partner && <span className="text-xs text-[#134e40] font-semibold">{opportunity.partner}</span>}
         </div>
 
         <h1 className="font-serif-heading text-3xl sm:text-4xl font-bold text-[#134e40] mb-3">
           {opportunity.title}
         </h1>
 
-        <p className="text-base text-[#37474F] leading-relaxed mb-6">
-          {opportunity.overview}
-        </p>
+        {opportunity.overview && <p className="text-base text-[#37474F] leading-relaxed mb-6">{opportunity.overview}</p>}
 
         {/* Quick Spec Highlights */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[#b8ded6]/60">
@@ -53,19 +83,19 @@ export default function OpportunityDetailsPage({
             <span className="text-xs text-[#718078] uppercase tracking-wider block mb-1">
               {getUIText('details', 'durationFormat', langId)}
             </span>
-            <span className="text-sm font-bold text-[#134e40]">{opportunity.duration}</span>
+            <span className="text-sm font-bold text-[#134e40]">{opportunity.duration || 'Not specified'}</span>
           </div>
           <div>
             <span className="text-xs text-[#718078] uppercase tracking-wider block mb-1">
               {getUIText('details', 'stipendSupport', langId)}
             </span>
-            <span className="text-sm font-bold text-emerald-700">{opportunity.stipend}</span>
+            <span className="text-sm font-bold text-emerald-700">{opportunity.stipend || 'Not specified'}</span>
           </div>
           <div>
             <span className="text-xs text-[#718078] uppercase tracking-wider block mb-1">
               {getUIText('details', 'expectedIncome', langId)}
             </span>
-            <span className="text-sm font-bold text-[#134e40]">{opportunity.avgEarnings}</span>
+            <span className="text-sm font-bold text-[#134e40]">{opportunity.avgEarnings || 'Not specified'}</span>
           </div>
         </div>
       </div>
@@ -90,6 +120,7 @@ export default function OpportunityDetailsPage({
               <span>{getUIText('details', 'skillsYouHave', langId)} ({opportunity.skillsPossessed.length})</span>
             </div>
             <ul className="space-y-2 text-sm text-[#263238]">
+              {opportunity.skillsPossessed.length === 0 && <li className="text-xs text-[#718078]">No current skills were provided for this view.</li>}
               {opportunity.skillsPossessed.map((skill, i) => (
                 <li key={i} className="flex items-center gap-2 bg-white/80 p-2.5 rounded-xl border border-[#b8ded6]/40">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -106,6 +137,7 @@ export default function OpportunityDetailsPage({
               <span>{getUIText('details', 'skillsYouWillLearn', langId)} ({opportunity.skillsMissing.length})</span>
             </div>
             <ul className="space-y-2 text-sm text-[#263238]">
+              {opportunity.skillsMissing.length === 0 && <li className="text-xs text-[#718078]">No mapped training skills are available.</li>}
               {opportunity.skillsMissing.map((skill, i) => (
                 <li key={i} className="flex items-center gap-2 bg-white/90 p-2.5 rounded-xl border border-[#fad7ab]/50">
                   <span className="w-2 h-2 rounded-full bg-[#e69943]" />
@@ -126,6 +158,7 @@ export default function OpportunityDetailsPage({
           {getUIText('details', 'eligibilityCriteria', langId)}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          {opportunity.eligibility.length === 0 && <p className="text-sm text-[#718078]">Eligibility information is not available in the current catalog.</p>}
           {opportunity.eligibility.map((req, i) => (
             <div key={i} className="flex items-center gap-2.5 p-3 rounded-xl bg-[#FAF7F0] border border-[#cbd5e1]">
               <ShieldCheck className="w-4 h-4 text-[#134e40]" />

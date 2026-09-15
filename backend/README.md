@@ -37,15 +37,17 @@ backend/
 │   ├── schemas/
 │   │   ├── __init__.py
 │   │   ├── common.py             # Health and error schemas
-│   │   ├── location.py           # State and district response schemas
+│   │   ├── location.py           # Location request and response schemas
 │   │   └── opportunity.py        # Opportunity and skill schemas
+│   ├── services/
+│       └── location_resolution.py # Reverse-geocoder adapter and LGD resolver
 │   └── api/
 │       ├── __init__.py
 │       ├── router.py             # Central API router (/api)
 │       └── routes/
 │           ├── __init__.py
 │           ├── health.py         # /api/health and /api/health/db
-│           ├── locations.py      # /api/locations/states and state districts
+│           ├── locations.py      # Location master and automatic resolution
 │           └── opportunities.py  # /api/opportunities and opportunity details
 ├── tests/
 │   ├── __init__.py
@@ -83,6 +85,12 @@ FRONTEND_ORIGIN=http://localhost:5173
 HOST=0.0.0.0
 PORT=8000
 ENVIRONMENT=development
+
+# Automatic location resolution (dev default; use an approved provider in production)
+LOCATION_PROVIDER=nominatim
+LOCATION_REVERSE_GEOCODER_URL=https://nominatim.openstreetmap.org/reverse
+LOCATION_PROVIDER_USER_AGENT=Utthan/2B location resolver
+LOCATION_PROVIDER_TIMEOUT_SECONDS=8
 ```
 
 > **Security Note:** Never commit `.env` to Git. The `.gitignore` file is pre-configured to ignore all `.env` files and Python bytecode caches.
@@ -122,12 +130,15 @@ The API will be live at:
 |---|---|---|
 | `GET` | `/api/locations/states` | Returns all 36 States/UTs from authoritative master |
 | `GET` | `/api/locations/states/{state_code}/districts` | Returns districts for given state (e.g. `UP`, `state-up`) |
+| `POST` | `/api/locations/resolve` | Resolves transient browser coordinates to one exact LGD State/District |
 
 ### 3. Opportunities Catalog
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/opportunities` | List schemes with optional filters (`state_id`, `category`, `education`, `mobility`) |
 | `GET` | `/api/opportunities/{id}` | Detailed opportunity view including mapped NSQF skills |
+
+The browser sends latitude, longitude, and optional accuracy only during onboarding. The backend does not persist or log raw coordinates. The current adapter uses Nominatim for development verification; production deployment requires an approved reverse-geocoding provider, its policy review, and any required credentials/configuration.
 
 ---
 

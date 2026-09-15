@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Volume2, VolumeX, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, RefreshCw, Globe, Check } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, RefreshCw, Globe, MapPin, UserRound, Check } from 'lucide-react';
 import { speakWithSarvamAI, stopAIVoice, createSpeechRecognizer } from '../services/aiService';
 import { LANGUAGES } from '../data/languages';
 import { detectLanguageFromVoice } from '../data/uiTranslations';
+import { resolveLocation } from '../services/api';
 
 const INTERVIEW_STEPS = [
   {
@@ -111,11 +112,15 @@ export default function ConversationPage({
   currentLanguage, 
   onSelectLanguage,
   onCompleteConversation,
-  onNavigate 
+  onLocationResolved
 }) {
-  // 0 = Language Step, 1 = Trade, 2 = Education, 3 = Travel, 4 = Goal, 5 = Complete
+  // 0 = Language, 1 = Name, 2 = Automatic Location, 3-6 = Interview, 7 = Complete
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [nameInput, setNameInput] = useState('');
+  const [resolvedLocation, setResolvedLocation] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('idle');
+  const [locationError, setLocationError] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
@@ -124,13 +129,20 @@ export default function ConversationPage({
   const lastSpokenStepRef = useRef(-1);
   const hasSpokenGreetingRef = useRef(false);
   const activeRecognizer = useRef(null);
+  const locationAttemptedRef = useRef(false);
 
   const langCode = currentLanguage?.id || 'en';
   const isLanguageStep = currentStepIndex === 0;
-  const isCompleteStep = currentStepIndex > INTERVIEW_STEPS.length;
-  const currentInterviewStep = !isLanguageStep && !isCompleteStep 
-    ? INTERVIEW_STEPS[currentStepIndex - 1] 
+  const isNameStep = currentStepIndex === 1;
+  const isLocationStep = currentStepIndex === 2;
+  const isCompleteStep = currentStepIndex > INTERVIEW_STEPS.length + 2;
+  const currentInterviewStep = !isLanguageStep && !isNameStep && !isLocationStep && !isCompleteStep
+    ? INTERVIEW_STEPS[currentStepIndex - 3]
     : null;
+  const spokenQuestion = currentInterviewStep?.question?.[langCode]
+    || currentInterviewStep?.question?.hi
+    || currentInterviewStep?.question?.en
+    || '';
 
   // Speak when step changes to a new step
   useEffect(() => {
@@ -147,8 +159,12 @@ export default function ConversationPage({
       hasSpokenGreetingRef.current = true;
       textToSpeak = "Welcome to Utthan. Please speak or select your language to begin.";
       speechLang = 'en';
-    } else if (currentInterviewStep) {
-      textToSpeak = currentInterviewStep.question[langCode] || currentInterviewStep.question.hi || currentInterviewStep.question.en;
+    } else if (isNameStep) {
+      textToSpeak = "Please tell us your name, or type it below.";
+    } else if (isLocationStep) {
+      textToSpeak = "We need your location to find opportunities and training available near you. Tap the button when you are ready.";
+    } else if (spokenQuestion) {
+      textToSpeak = spokenQuestion;
     }
 
     if (textToSpeak) {
@@ -167,7 +183,7 @@ export default function ConversationPage({
     return () => {
       stopAIVoice();
     };
-  }, [currentStepIndex, soundEnabled]);
+  }, [currentStepIndex, soundEnabled, isLanguageStep, isNameStep, isLocationStep, spokenQuestion, isCompleteStep, langCode]);
 
   // Handle language confirmation (voice or tap)
   const handleConfirmLanguage = (lang) => {
@@ -182,6 +198,12 @@ export default function ConversationPage({
       onSelectLanguage(lang);
     }
 
+    setResolvedLocation(null);
+    setLocationStatus('idle');
+    setLocationError('');
+    setNameInput('');
+    locationAttemptedRef.current = false;
+
     // Confirmation voice in that exact language
     const confirmationVoice = lang.id === 'bn' 
       ? "বাংলা ভাষা নির্বাচন করা হয়েছে। এবার আপনার পছন্দের কাজ সম্পর্কে জানা যাক।" 
@@ -195,13 +217,65 @@ export default function ConversationPage({
         .finally(() => {
           setIsSpeaking(false);
           // Advance to Step 1 only after confirmation voice finishes
-          setTimeout(() => {
-            setCurrentStepIndex(1);
-          }, 300);
+          setTimeout(() => setCurrentStepIndex(1), 300);
         });
     } else {
       setCurrentStepIndex(1);
     }
+  };
+
+  const continueFromName = () => {
+    const name = nameInput.trim();
+    if (!name) return;
+    setAnswers((previous) => ({ ...previous, name }));
+    setCurrentStepIndex(2);
+  };
+
+  const requestAutomaticLocation = () => {
+    if (locationStatus === 'detecting') return;
+
+    locationAttemptedRef.current = true;
+    setLocationStatus('detecting');
+    setLocationError('');
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationStatus('error');
+      setLocationError('This browser does not support automatic location.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const location = await resolveLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          });
+          setResolvedLocation(location);
+          setAnswers((previous) => ({ ...previous, location }));
+          setLocationStatus('success');
+          if (onLocationResolved) onLocationResolved(location);
+        } catch {
+          setLocationStatus('error');
+          setLocationError('We could not confirm your official State and District. Please try again.');
+        }
+      },
+      (error) => {
+        const messages = {
+          1: 'Location permission was not granted. You can try again when ready.',
+          2: 'Your device could not determine a location. Please try again.',
+          3: 'Location detection took too long. Please try again.',
+        };
+        setLocationStatus('error');
+        setLocationError(messages[error.code] || 'Location is temporarily unavailable. Please try again.');
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 },
+    );
+  };
+
+  const continueFromLocation = () => {
+    if (resolvedLocation) setCurrentStepIndex(3);
   };
 
   // Handle answering interview steps
@@ -216,12 +290,12 @@ export default function ConversationPage({
     const newAnswers = { ...answers, [currentInterviewStep.category]: selectedText };
     setAnswers(newAnswers);
 
-    if (currentStepIndex < INTERVIEW_STEPS.length) {
+    if (currentStepIndex < INTERVIEW_STEPS.length + 2) {
       // Advance to next step directly; useEffect will cleanly speak the new question
       setCurrentStepIndex(prev => prev + 1);
     } else {
       // Complete!
-      setCurrentStepIndex(INTERVIEW_STEPS.length + 1);
+      setCurrentStepIndex(INTERVIEW_STEPS.length + 3);
       const completionVoice = langCode === 'bn'
         ? "অভিনন্দন! আপনার তথ্যের ভিত্তিতে আমরা আপনার জেলার ৫টি সেরা সরকারি সুযোগ খুঁজে পেয়েছি।"
         : langCode === 'hi'
@@ -313,6 +387,10 @@ export default function ConversationPage({
     if (isLanguageStep) {
       text = "Welcome to Utthan. Please speak or select your language to begin.";
       speechLang = 'en';
+    } else if (isNameStep) {
+      text = "Please tell us your name, or type it below.";
+    } else if (isLocationStep) {
+      text = "We need your location to find opportunities and training available near you.";
     } else if (currentInterviewStep) {
       text = currentInterviewStep.question[langCode] || currentInterviewStep.question.hi || currentInterviewStep.question.en;
     }
@@ -415,7 +493,147 @@ export default function ConversationPage({
       )}
 
       {/* ============================================================ */}
-      {/* 2. STEPS 1-4: STEP-BY-STEP VOICE ASSISTANT INTERVIEW        */}
+      {/* 2. NAME STEP                                                  */}
+      {/* ============================================================ */}
+      {isNameStep && (
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-[#b8ded6] shadow-xl max-w-xl w-full text-center animate-in fade-in duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#134e40] bg-[#FAF7F0] px-3.5 py-1.5 rounded-full border border-[#b8ded6]">
+              <UserRound className="w-3.5 h-3.5 text-[#134e40]" />
+              <span>Step 1: Tell Us Your Name</span>
+            </div>
+            <button
+              onClick={handleReplayQuestion}
+              className={`p-2 rounded-full border border-[#b8ded6] hover:bg-[#FAF7F0] text-[#134e40] transition-colors ${
+                isSpeaking ? 'bg-emerald-100 animate-pulse ring-2 ring-emerald-400' : 'bg-white'
+              }`}
+              title="Re-listen name question"
+            >
+              <Volume2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#134e40] mb-3">
+            What should we call you?
+          </h2>
+          <p className="text-sm text-[#37474F] mb-6">Tell us your name so we can personalize your Utthan journey.</p>
+          <input
+            value={nameInput}
+            onChange={(event) => setNameInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') continueFromName();
+            }}
+            placeholder="Enter your name"
+            aria-label="Your name"
+            className="w-full px-4 py-3 rounded-2xl border border-[#b8ded6] bg-white text-[#263238] focus:outline-none focus:ring-2 focus:ring-[#134e40]/30 mb-5"
+          />
+          <div className="w-full flex items-center justify-between pt-4 border-t border-gray-100 text-xs text-[#718078]">
+            <button
+              onClick={() => setCurrentStepIndex(0)}
+              className="flex items-center gap-1 hover:text-[#134e40] font-medium"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
+            <button
+              onClick={continueFromName}
+              disabled={!nameInput.trim()}
+              className="flex items-center gap-1 hover:text-[#134e40] disabled:opacity-40 font-bold"
+            >
+              <span>Continue</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 3. AUTOMATIC LOCATION STEP                                   */}
+      {/* ============================================================ */}
+      {isLocationStep && (
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-[#b8ded6] shadow-xl max-w-xl w-full text-center animate-in fade-in duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#134e40] bg-[#FAF7F0] px-3.5 py-1.5 rounded-full border border-[#b8ded6]">
+              <MapPin className="w-3.5 h-3.5 text-[#134e40]" />
+              <span>Step 2: Find Your Location</span>
+            </div>
+            <button
+              onClick={handleReplayQuestion}
+              className={`p-2 rounded-full border border-[#b8ded6] hover:bg-[#FAF7F0] text-[#134e40] transition-colors ${
+                isSpeaking ? 'bg-emerald-100 animate-pulse ring-2 ring-emerald-400' : 'bg-white'
+              }`}
+              title="Re-listen location explanation"
+            >
+              <Volume2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#134e40] mb-3">
+            Find opportunities near you
+          </h2>
+          <p className="text-sm text-[#37474F] mb-6">
+            We need your location to find opportunities and training available near you. Your exact coordinates are used only to confirm your official State and District.
+          </p>
+
+          {locationStatus === 'success' && resolvedLocation ? (
+            <div className="p-4 rounded-2xl bg-[#DCECDF]/60 border border-[#b8ded6] text-left mb-5">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm mb-2">
+                <CheckCircle2 className="w-5 h-5" />
+                <span>Location detected</span>
+              </div>
+              <p className="text-base font-bold text-[#134e40]">
+                {resolvedLocation.district.name}, {resolvedLocation.state.name}
+              </p>
+              <p className="text-xs text-[#718078] mt-1">This official location will be used to find nearby opportunities.</p>
+            </div>
+          ) : (
+            <button
+              onClick={requestAutomaticLocation}
+              disabled={locationStatus === 'detecting'}
+              className="w-full px-5 py-3.5 rounded-full bg-[#134e40] hover:bg-[#0d3b30] disabled:opacity-60 text-white font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <MapPin className="w-5 h-5" />
+              <span>{locationStatus === 'detecting' ? 'Detecting location...' : 'Allow location access'}</span>
+            </button>
+          )}
+
+          {locationStatus === 'error' && (
+            <div className="mt-4 p-3 rounded-xl bg-[#FFF8EE] border border-[#FAD7AB] text-left">
+              <p className="text-xs text-[#7a3b0e] mb-3">{locationError}</p>
+              <button
+                onClick={requestAutomaticLocation}
+                className="text-xs font-bold text-[#134e40] hover:underline flex items-center gap-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Try again
+              </button>
+            </div>
+          )}
+
+          <div className="w-full flex items-center justify-between mt-6 pt-4 border-t border-gray-100 text-xs text-[#718078]">
+            <button
+              onClick={() => {
+                stopAIVoice();
+                setCurrentStepIndex(1);
+              }}
+              className="flex items-center gap-1 hover:text-[#134e40] font-medium"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
+            <button
+              onClick={continueFromLocation}
+              disabled={!resolvedLocation}
+              className="flex items-center gap-1 hover:text-[#134e40] disabled:opacity-40 font-bold"
+            >
+              <span>Continue</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 4. STEPS 3-6: STEP-BY-STEP VOICE ASSISTANT INTERVIEW        */}
       {/* ============================================================ */}
       {!isLanguageStep && !isCompleteStep && currentInterviewStep && (
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-[#b8ded6] shadow-xl max-w-2xl w-full flex flex-col items-center text-center transition-all animate-in fade-in duration-300">
@@ -457,7 +675,7 @@ export default function ConversationPage({
           <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-6 border border-[#b8ded6]/40">
             <div 
               className="bg-[#134e40] h-full transition-all duration-500 rounded-full"
-              style={{ width: `${(currentStepIndex / INTERVIEW_STEPS.length) * 100}%` }}
+              style={{ width: `${((currentStepIndex - 1) / (INTERVIEW_STEPS.length + 2)) * 100}%` }}
             />
           </div>
 
@@ -524,14 +742,14 @@ export default function ConversationPage({
             <button
               onClick={() => {
                 stopAIVoice();
-                setCurrentStepIndex(prev => Math.max(0, prev - 1));
+                setCurrentStepIndex(prev => Math.max(3, prev - 1));
               }}
               className="flex items-center gap-1 hover:text-[#134e40] font-medium"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
             </button>
-            <span className="font-semibold">Step {currentStepIndex} of {INTERVIEW_STEPS.length}</span>
+            <span className="font-semibold">Step {currentStepIndex - 1} of {INTERVIEW_STEPS.length + 2}</span>
           </div>
 
         </div>
@@ -573,7 +791,17 @@ export default function ConversationPage({
               <span className="font-bold text-[#134e40]">{answers.education || "Selected"}</span>
             </div>
             <div className="flex items-center justify-between">
+              <span className="text-[#718078]">Name:</span>
+              <span className="font-bold text-[#134e40]">{answers.name || "Not provided"}</span>
+            </div>
+            <div className="flex items-center justify-between">
               <span className="text-[#718078]">Location:</span>
+              <span className="font-bold text-[#134e40]">
+                {answers.location ? `${answers.location.district.name}, ${answers.location.state.name}` : "Not detected"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[#718078]">Travel:</span>
               <span className="font-bold text-[#134e40]">{answers.mobility || "Selected"}</span>
             </div>
             <div className="flex items-center justify-between">
@@ -597,6 +825,11 @@ export default function ConversationPage({
                 stopAIVoice();
                 setCurrentStepIndex(0);
                 setAnswers({});
+                setNameInput('');
+                setResolvedLocation(null);
+                setLocationStatus('idle');
+                setLocationError('');
+                locationAttemptedRef.current = false;
               }}
               className="px-5 py-3 rounded-full border border-[#cbd5e1] hover:bg-white text-[#718078] font-medium text-sm transition-colors flex items-center justify-center gap-1.5"
             >
