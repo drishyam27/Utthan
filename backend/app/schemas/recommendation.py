@@ -18,11 +18,14 @@ class RecommendationSkillMetadata(BaseModel):
 
 class RecommendationResultContract(BaseModel):
     opportunity_id: str = Field(..., min_length=1, max_length=64)
+    title: Optional[str] = None
     eligible: bool
     score: int = Field(..., ge=0, le=100)
     matched_criteria: List[str] = Field(default_factory=list)
     unmet_criteria: List[str] = Field(default_factory=list)
     reasons: List[str] = Field(default_factory=list)
+    state_id: Optional[str] = None
+    district_id: Optional[str] = None
     nsqf_level: Optional[int] = Field(None, ge=1, le=8)
     qp_code: Optional[str] = None
     skills: List[RecommendationSkillMetadata] = Field(default_factory=list)
@@ -32,5 +35,9 @@ class RecommendationResponseContract(BaseModel):
     beneficiary_id: UUID
     state_id: Optional[str] = None
     district_id: Optional[str] = None
+    interview_id: Optional[UUID] = None
+    has_completed_interview: bool = True
     generated_at: datetime
+    message: Optional[str] = None
     recommendations: List[RecommendationResultContract] = Field(default_factory=list)
+    ineligible_opportunities: List[RecommendationResultContract] = Field(default_factory=list)

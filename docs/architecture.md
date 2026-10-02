@@ -244,40 +244,66 @@ Local tracker for citizen pathway progress.
 
 ---
 
-## 3. Planned Recommendation Architecture
+## 3. Deterministic Recommendation Architecture
 
 ### Core Design Principle: Deterministic Eligibility First
-> **Critical Rule:** The LLM does NOT decide whether a citizen is legally eligible for a government program. Eligibility is strictly deterministic based on statutory criteria (State/District, Education, Age, Category).
+> **Critical Rule:** The LLM does NOT decide whether a citizen is legally eligible for a government program. Eligibility is strictly deterministic based on statutory criteria (State/District, Education, Age, Mobility).
 
 ```
-Citizen Input (Location, Education, Mobility, Trade Interest)
+Beneficiary Profile + Completed Interview Responses
                             ↓
        ┌────────────────────────────────────────┐
        │   1. Deterministic Eligibility Filter  │
-       │   - State / District match             │
-       │   - Education threshold match          │
-       │   - Target demographic filter          │
+       │   - Geography (Pan-India vs LGD State) │
+       │   - Canonical location required        │
+       │   - Minimum Education threshold rank   │
+       │   - Age boundaries (if provided)       │
+       │   - Mobility requirement rank          │
        └───────────────────┬────────────────────┘
                            │ Eligible Schemes Pool
                            ▼
        ┌────────────────────────────────────────┐
        │   2. Rule-Based Scoring & Ranking      │
-       │   - Trade alignment weight (40%)       │
-       │   - Mobility tolerance weight (25%)    │
-       │   - Educational fit weight (20%)       │
-       │   - Goal priority weight (15%)         │
+       │   - Trade / craft alignment (40%)      │
+       │   - Mobility preference fit (25%)      │
+       │   - Educational pace fit (20%)         │
+       │   - Goal / milestone priority fit (15%)│
+       │   - Deterministic Tie-Breaker:         │
+       │     score DESC, nsqf DESC, opp_id ASC  │
        └───────────────────┬────────────────────┘
-                           │ Ranked Top-N Matches
+                           │ Ranked Top-N Matches + Explainable Ineligible Pool
                            ▼
        ┌────────────────────────────────────────┐
-       │   3. Contextual Reasoning (Groq AI)   │
-       │   - Explains in citizen's mother tongue│
-       │   - "Why this matches your situation"  │
-       │   - Summarizes practical next steps    │
-       └───────────────────┬────────────────────┘
-                           ▼
-                 Delivered to Frontend
+       │   3. Capability-Protected API Response │
+       │   - GET /api/beneficiaries/{id}/recs   │
+       │   - NSQF QP code & skills metadata     │
+       │   - Explicit matched & unmet criteria  │
+       └────────────────────────────────────────┘
 ```
+
+### Phase 2C-4 Implementation Details
+* **Protected Endpoint**: `GET /api/beneficiaries/{beneficiary_id}/recommendations`
+* **Authentication**: Capability Bearer Token (validated against `beneficiary_sessions.token_hash` with expiry and revocation check).
+* **Missing Interview Handling**: If no interview has been completed, returns HTTP 200 with `has_completed_interview: false`, `recommendations: []`, and an informative message without fabricating recommendations.
+* **Canonical Location Strictness**: Missing or unresolved State/District rejects restricted opportunities without guessing or inferring location.
+* **Scoring Weights (100% total)**:
+  - Trade Alignment: 40 points max (keyword match = 40, category cluster = 25, fallback = 15).
+  - Mobility Fit: 25 points max (exact commute match = 25, regional commute = 18).
+  - Education Fit: 20 points max (exact qualification pace = 20, exceeding base = 17).
+  - Goal Fit: 15 points max (direct milestone match = 15, complementary = 10).
+* **Tie-Breaker**: Secondary sort on `nsqf_level` DESC, tertiary sort on `opportunity_id` ASC.
+* **Separation of Concerns**: Returns `recommendations` (strictly eligible) and `ineligible_opportunities` (with `eligible: false` and explicit `unmet_criteria`).
+
+### Phase 2C-5 Implementation Details (Frontend Integration)
+* **API Client Consumption**: `src/services/api.js` defines `fetchRecommendations(beneficiaryId, sessionToken)` calling `GET /api/beneficiaries/{beneficiary_id}/recommendations` with the standard `Authorization: Bearer <token>` capability header.
+* **Architecture Preservation**: Backend remains the sole authoritative source of truth. Zero client-side re-scoring, re-ranking, or eligibility filtering is implemented in React.
+* **Opportunity Adapter Extension**: `src/services/opportunityAdapter.js` normalizes recommendation payload fields (`score` $\rightarrow$ `matchScore`, `matched_criteria` $\rightarrow$ `matchedCriteria`, `unmet_criteria` $\rightarrow$ `unmetCriteria`, `why_matches` $\rightarrow$ `reasons`).
+* **UX States Handled in `OpportunitiesPage`**:
+  1. *Loading*: Accessible skeleton shimmer feedback.
+  2. *Recommendations Available*: Badges highlighting profile match score (e.g., `85% Profile Match`), reasons why recommended (`Why this is recommended`), and matched criteria pills.
+  3. *Incomplete Interview*: Action card explaining that livelihood assessment is required, linking directly to `ConversationPage`.
+  4. *No Eligible Matches*: Contextual empty state with transparent disclosure of ineligible schemes and unmet statutory criteria.
+  5. *API Error / Network Failure*: Graceful error boundary state with safe retry button without exposing backend stack traces.
 
 ---
 

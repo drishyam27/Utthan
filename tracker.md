@@ -6,9 +6,9 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 2C-3 Complete — Persistent Interview Lifecycle Complete
-- **Current Development Phase**: Phase 2C-3 (Interview Persistence)
-- **Next Development Phase**: Phase 2C-4 (Deterministic Recommendation Service)
+- **Status**: Phase 2C-5 Complete — Frontend Recommendation Integration Established
+- **Current Development Phase**: Phase 2C-5 (Frontend Recommendation Integration)
+- **Next Development Phase**: Phase 3 (Adaptive Voice Interview & Profile Extraction)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
 - **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
@@ -26,10 +26,10 @@
 | **State & District Dataset** | **COMPLETED** | Authoritative 36 States/UTs & 784 districts from LGD master in `canonicalLocations.json` & `locations.js`; automatic resolution validates against the same Supabase master | Use canonical IDs in later profile/recommendation work |
 | **Verified Opportunities Data**| **COMPLETED** | 7 verified government schemes with NSQF & portal source links | Served via `/api/opportunities` |
 | **Skills Catalog (NSQF)** | **COMPLETED** | 11 standardized skills with official SSC QP codes & levels | Embedded in opportunity details |
-| **Recommendation Engine** | **COMPLETED** | Deterministic eligibility checks & weighted scoring in `recommendationEngine.js` | Connect to backend in Phase 3 |
+| **Recommendation Engine** | **COMPLETED** | Server-side deterministic recommendation service active at `GET /api/beneficiaries/{id}/recommendations` and consumed by frontend `OpportunitiesPage` | Connect to Groq explanation in Phase 3 |
 | **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & 784-district seed in `supabase/seed/02_all_india_districts.sql` | Verified in Supabase |
 | **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
-| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend with health, location, automatic location-resolution, opportunity, and anonymous beneficiary profile routes | Add interview/recommendation APIs in later phases |
+| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend with health, location, automatic location-resolution, opportunity, anonymous beneficiary, interview, and recommendation routes | Add application APIs in later phases |
 | **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
 
 ---
@@ -112,13 +112,25 @@
 - [x] Added interview lifecycle, revision, completion-finality, and IDOR/security coverage while retaining all earlier regression tests.
 - [x] Deferred recommendations, AI/LLM extraction, voice-provider changes, authentication, and all Phase 2C-4+ work.
 
-### ⏳ Phase 2C-4: Deterministic Recommendation Service (NOT STARTED)
-- [ ] Move the verified matching logic behind a single backend recommendation service.
+### ✅ Phase 2C-4: Deterministic Recommendation Service (COMPLETED)
+- [x] Moved verified matching logic to server-side backend recommendation service (`backend/app/services/recommendation_service.py`) with zero LLM hallucination.
+- [x] Ported hard eligibility gates: Geography (Pan-India vs State/District restriction), Minimum Education, Age limits, and Mobility radius.
+- [x] Enforced strict canonical location rule: missing/unresolved State or District rejects restricted opportunities without inference.
+- [x] Ported weighted scoring matrix: Trade / Skills alignment (40), Mobility fit (25), Education fit (20), Goal fit (15) = 100.
+- [x] Implemented deterministic tie-breaker: `score` DESC, `nsqf_level` DESC, `opportunity_id` ASC.
+- [x] Added capability-protected endpoint `GET /api/beneficiaries/{beneficiary_id}/recommendations` in `backend/app/api/routes/recommendations.py`.
+- [x] Handled incomplete interviews safely: returns non-error response with `has_completed_interview=False` without fabricating recommendations.
+- [x] Populated mapped NSQF skills metadata (`RecommendationSkillMetadata`) for opportunities with verified QP codes.
+- [x] Added comprehensive backend test suite (`backend/tests/test_recommendations.py`) passing 16 focused tests with 100% parity to frontend matching test vectors (68/68 backend tests passing).
+- [x] Kept existing frontend recommendation UI intact and deferred Phase 2C-5 frontend integration.
 
-### ⏳ Phase 2C: Profile, Recommendation & AI Backend Integration (NOT STARTED)
-- [ ] Connect the resolved canonical location and interview profile to deterministic backend recommendations.
-- [ ] Add server-side profile persistence and authentication boundaries.
-- [ ] Move approved AI/voice provider integrations behind the backend gateway.
+### ✅ Phase 2C-5: Frontend Recommendation Integration (COMPLETED)
+- [x] Connected `OpportunitiesPage` to `GET /api/beneficiaries/{beneficiary_id}/recommendations` using capability bearer token from `sessionStorage`.
+- [x] Implemented robust UX states: Loading shimmer, Recommendations available with score & matched criteria, Incomplete interview prompt directing to conversation, Empty state with explanation, and API failure with retry.
+- [x] Enhanced `mapOpportunity` adapter to surface deterministic score, matched criteria, unmet criteria, and why-it-matches reasons.
+- [x] Preserved existing Utthan cultural design system without generic SaaS redesign, fake AI badges, or invented statistics.
+- [x] Enforced strict architectural rule: zero client-side scoring or eligibility recalculation; backend remains single source of truth.
+- [x] Added automated frontend unit tests for recommendation contract mapping (`tests/recommendationsFrontend.test.js`).
 
 ### ⏳ Phase 3: Adaptive Voice Interview & Profile Extraction (NOT STARTED)
 - [ ] Onboarding flow capturing Beneficiary Name, State, and District.

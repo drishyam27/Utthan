@@ -111,3 +111,9 @@ export function completeInterview(interviewId, sessionToken, expectedRevision) {
     body: JSON.stringify({ expected_revision: expectedRevision }),
   });
 }
+
+export function fetchRecommendations(beneficiaryId, sessionToken) {
+  return request(`/api/beneficiaries/${encodeURIComponent(beneficiaryId)}/recommendations`, {
+    headers: capabilityHeaders(sessionToken),
+  });
+}

@@ -26,7 +26,7 @@ export default function OpportunityDetailsPage({
     setError('');
     fetchOpportunity(initialOpportunity.id)
       .then((payload) => {
-        if (!cancelled) setLoadedOpportunity(mapOpportunity(payload));
+        if (!cancelled) setLoadedOpportunity(mapOpportunity(payload, initialOpportunity));
       })
       .catch((requestError) => {
         if (!cancelled) {

@@ -1,4 +1,4 @@
-import { getDistrictById, getStateById } from '../data/locations';
+import { getDistrictById, getStateById } from '../data/locations.js';
 
 function locationLabel(opportunity) {
   const district = getDistrictById(opportunity.district_id);
@@ -34,21 +34,28 @@ function eligibilityLabels(opportunity) {
   return requirements;
 }
 
-export function mapOpportunity(opportunity = {}) {
+export function mapOpportunity(opportunity = {}, overrides = {}) {
   const skills = Array.isArray(opportunity.skills) ? opportunity.skills : [];
+  const scoreVal = overrides.matchScore ?? (typeof opportunity.score === 'number' ? opportunity.score : (typeof opportunity.match_score === 'number' ? opportunity.match_score : (typeof opportunity.matchScore === 'number' ? opportunity.matchScore : null)));
+  const reasonsList = overrides.reasons ?? (Array.isArray(opportunity.reasons) ? opportunity.reasons : []);
+  const whyMatchesText = overrides.whyMatches ?? (opportunity.why_matches || opportunity.whyMatches || (reasonsList.length > 0 ? reasonsList[0] : null));
 
   return {
     ...opportunity,
-    partner: opportunity.provider,
-    sourceUrl: opportunity.source_url,
+    partner: opportunity.provider || opportunity.partner,
+    sourceUrl: opportunity.source_url || opportunity.sourceUrl,
     location: locationLabel(opportunity),
-    avgEarnings: opportunity.expected_earnings || null,
+    avgEarnings: opportunity.expected_earnings || opportunity.avgEarnings || null,
     overview: opportunity.overview || null,
     eligibility: eligibilityLabels(opportunity),
     skillsPossessed: [],
     skillsMissing: skills.filter((skill) => skill.is_primary !== false).map((skill) => skill.name),
-    actionSteps: Array.isArray(opportunity.action_steps) ? opportunity.action_steps : [],
-    matchScore: typeof opportunity.match_score === 'number' ? opportunity.match_score : null,
-    whyMatches: opportunity.why_matches || null,
+    actionSteps: Array.isArray(opportunity.action_steps) ? opportunity.action_steps : (Array.isArray(opportunity.actionSteps) ? opportunity.actionSteps : []),
+    matchScore: scoreVal,
+    whyMatches: whyMatchesText,
+    matchedCriteria: overrides.matchedCriteria ?? (Array.isArray(opportunity.matched_criteria) ? opportunity.matched_criteria : (Array.isArray(opportunity.matchedCriteria) ? opportunity.matchedCriteria : [])),
+    unmetCriteria: overrides.unmetCriteria ?? (Array.isArray(opportunity.unmet_criteria) ? opportunity.unmet_criteria : (Array.isArray(opportunity.unmetCriteria) ? opportunity.unmetCriteria : [])),
+    reasons: reasonsList,
+    eligible: overrides.eligible ?? (typeof opportunity.eligible === 'boolean' ? opportunity.eligible : true),
   };
 }

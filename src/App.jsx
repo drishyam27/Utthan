@@ -288,7 +288,10 @@ export default function App() {
           <OpportunitiesPage
             currentLanguage={currentLanguage}
             stateId={resolvedLocation?.state?.id}
+            beneficiarySession={beneficiarySession}
             onSelectOpportunity={handleSelectOpportunity}
+            onStartInterview={handleStartVoice}
+            onInvalidSession={clearInvalidBeneficiarySession}
           />
         )}
 
