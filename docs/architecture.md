@@ -339,3 +339,61 @@ Beneficiary Profile + Completed Interview Responses
 * **Fallback for Other 12 Scheduled Languages**:
   Browser `speechSynthesis` with native voice matching.
 * **Future**: Bhashini Indic TTS for complete 22-language official coverage.
+
+---
+
+## 5. Authoritative NSQF / NQR Course Catalog Foundation
+
+### Overview & Data Provenance
+* **Source Dataset**: `NSQF-NQR Course Dataset/` containing 44 Microsoft Excel (`.xlsx`) workbooks.
+* **Volume**: Exactly **2,810** official qualification records across **44** distinct industry sectors.
+* **Integrity**: 0 missing titles, 0 missing codes, 0 missing levels, 0 missing sectors. Exactly 1 duplicate qualification code (`QG-04-ES-00913-2023-V1-SCGJ` shared by two distinct valid courses in Green Jobs) resolved via surrogate primary keys.
+* **Decimal NSQF Levels**: Spans 12 levels from Level 1.0 to Level 7.0 (including recognized half-levels: 2.5, 3.5, 4.5, 5.5, 6.5). Managed via PostgreSQL `NUMERIC(3, 1)`.
+* **Persons with Disability (PwD)**: Dedicated sector containing 231 courses, with explicit disability categories (`VI`, `SHI`, `LD`, `ID`).
+
+### Excluded Sector Policy
+The following 15 sectors are strictly excluded from the recommendation catalog:
+1. Judiciary
+2. Indian Defence Forces
+3. Legal Activities
+4. Legislators
+5. Musical Instruments
+6. Optical Products
+7. Postal Services
+8. Printing
+9. Public Administration
+10. Railways
+11. Real Estate
+12. Religious Professionals
+13. Shipping
+14. Tobacco Industry
+15. Unorganised Sector
+
+Audit finding: 0 records from these 15 sectors exist in the supplied dataset. The ingestion engine enforces this exclusion filter defensively for all future imports.
+
+### Database Architecture & Schema
+* **Migration**: `supabase/migrations/20261003000001_nsqf_nqr_catalog.sql`
+* **Tables**:
+  1. `nsqf_sectors`: Normalized sector taxonomy (`id VARCHAR(64) PRIMARY KEY`, `name VARCHAR(150) UNIQUE`, `course_count INTEGER`, `is_excluded BOOLEAN`).
+  2. `nsqf_qualifications`: Authoritative qualification register (`id UUID PRIMARY KEY`, `q_code VARCHAR(100)`, `title VARCHAR(255)`, `sector_id VARCHAR(64) REFERENCES nsqf_sectors(id)`, `nsqf_level NUMERIC(3, 1)`, `notional_hours_range VARCHAR(50)`, `min_notional_hours`, `max_notional_hours`, `is_pwd BOOLEAN`, `pwd_categories TEXT[]`, `proposed_occupation TEXT`, `progression_pathway TEXT`, `awarding_body TEXT`, `certifying_bodies TEXT`, `training_delivery_hours TEXT`, `raw_metadata JSONB`, `source_file VARCHAR(255)`).
+* **Security & RLS**: Public `SELECT` allowed for catalog discovery; write/upsert restricted to backend `service_role`.
+* **Idempotent Seed**: `supabase/seed_nsqf_catalog.sql` (5.3 MB containing 2,810 idempotent upsert statements).
+
+### API & Service Layer
+* **Module**: `backend/app/services/nsqf_service.py` & `backend/app/api/routes/nsqf.py`
+* **Endpoints**:
+  - `GET /api/nsqf/sectors`: Lists all active sectors with course counts.
+  - `GET /api/nsqf/courses`: Search and multi-criteria filtering (sector, NSQF level, level ranges, hours range, PwD category, search keyword).
+  - `GET /api/nsqf/courses/{course_id:path}`: Full syllabus, occupations, and progression details.
+  - `GET /api/nsqf/stats`: Aggregated metrics across levels, hours, and sectors.
+* **Offline Resilience**: Automatically falls back to high-performance in-memory parsed catalog if PostgreSQL is unconfigured or unreachable.
+
+### Relationship Between Catalog and Recommendation System
+* **Separation of Concerns**:
+  - `nsqf_qualifications` is the *authoritative master catalog* of all official government skills courses.
+  - `opportunities` represents *live training batches / PM-AJAY welfare schemes* with specific local intake quotas, stipends, and provider contracts.
+* **Migration Path**:
+  1. The existing prototype schemes link to qualifications via `opportunities.qp_code = nsqf_qualifications.q_code`.
+  2. In the upcoming adaptive interview phase, citizen assessment maps beneficiary profile attributes (schooling, work experience, location, goal, PwD) to target NSQF qualifications from the authoritative catalog.
+  3. Recommendation output matches target qualifications to live PM-AJAY delivery centers and financial assistance components.
+* **Architectural Rule**: Groq LLM is strictly prohibited from inventing or hallucinating courses. The deterministic catalog is the sole source of course existence.

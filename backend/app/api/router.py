@@ -4,7 +4,16 @@ Combines all sub-routers under the /api prefix.
 """
 
 from fastapi import APIRouter
-from app.api.routes import beneficiaries, health, interviews, locations, opportunities, recommendations, voice
+from app.api.routes import (
+    beneficiaries,
+    health,
+    interviews,
+    locations,
+    nsqf,
+    opportunities,
+    recommendations,
+    voice,
+)
 
 api_router = APIRouter()
 
@@ -15,3 +24,4 @@ api_router.include_router(beneficiaries.router)
 api_router.include_router(interviews.router)
 api_router.include_router(recommendations.router)
 api_router.include_router(voice.router)
+api_router.include_router(nsqf.router)

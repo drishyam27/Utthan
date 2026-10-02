@@ -6,8 +6,8 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 2C-6 Complete — Multilingual Voice Input / STT Integrated
-- **Current Development Phase**: Phase 2C-6 (Multilingual Voice Input / Speech-to-Text)
+- **Status**: Phase 2C-7 Complete — Authoritative NSQF / NQR Course Catalog Foundation
+- **Current Development Phase**: Phase 2C-7 (Authoritative NSQF / NQR Course Catalog Foundation)
 - **Next Development Phase**: Phase 3 (Adaptive Voice Interview & Profile Extraction)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
 - **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL, Sarvam AI STT
@@ -24,12 +24,13 @@
 | **Voice Playback (TTS)** | **PARTIALLY COMPLETED** | Sarvam AI Bulbul:v3 active for 11 languages; browser fallback for 12 | Expand coverage in voice service |
 | **Voice Input (STT)** | **COMPLETED** | Backend-integrated Sarvam AI STT (`saaras:v4`) at `POST /api/voice/transcribe` with zero disk persistence and browser Web Speech fallback | Feed transcripts into Groq LLM layer in Phase 3 |
 | **State & District Dataset** | **COMPLETED** | Authoritative 36 States/UTs & 784 districts from LGD master in `canonicalLocations.json` & `locations.js`; automatic resolution validates against the same Supabase master | Use canonical IDs in later profile/recommendation work |
+| **NSQF / NQR Course Catalog**| **COMPLETED** | Authoritative catalog of 2,810 qualifications across 44 sectors from `NSQF-NQR Course Dataset/`; decimal levels (1.0–7.0), PwD courses (231), idempotent seed SQL, `/api/nsqf/` routes, 94 tests passing | Feed courses into adaptive interview & recommendation matching |
 | **Verified Opportunities Data**| **COMPLETED** | 7 verified government schemes with NSQF & portal source links | Served via `/api/opportunities` |
 | **Skills Catalog (NSQF)** | **COMPLETED** | 11 standardized skills with official SSC QP codes & levels | Embedded in opportunity details |
 | **Recommendation Engine** | **COMPLETED** | Server-side deterministic recommendation service active at `GET /api/beneficiaries/{id}/recommendations` and consumed by frontend `OpportunitiesPage` | Connect to Groq explanation in Phase 3 |
-| **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` & 784-district seed in `supabase/seed/02_all_india_districts.sql` | Verified in Supabase |
+| **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` (including `20261003000001_nsqf_nqr_catalog.sql`) & seeds (`supabase/seed_nsqf_catalog.sql`) | Verified locally and in tests |
 | **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
-| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend with health, location, automatic location-resolution, opportunity, anonymous beneficiary, interview, and recommendation routes | Add application APIs in later phases |
+| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend with health, location, automatic location-resolution, opportunity, anonymous beneficiary, interview, voice, and nsqf routes | Connect interview layer in Phase 3 |
 | **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
 
 ---
@@ -227,6 +228,36 @@ Full localization configuration with native scripts, greetings, hero headers, vo
   - Guarded step transitions with `lastSpokenStepRef` and `hasSpokenGreetingRef` so that only one voice plays at any time, eliminating echoes and overlapping voices.
 - [x] **Real Web Speech Recognition**: Connected device microphone speech-to-text with multi-language keyword detection (`detectLanguageFromVoice`).
 - [x] **Audio Controls**: Voice mute/unmute toggle, pause-on-tap, and replay audio question buttons.
+
+---
+
+### ✅ Phase 2C-7: Authoritative NSQF / NQR Course Catalog Foundation (COMPLETED)
+- [x] **Comprehensive Dataset Audit**:
+  - Inspected all 44 workbooks in `NSQF-NQR Course Dataset/`.
+  - Discovered 2,810 course qualifications across 44 sectors with uniform 18-column NQR layout.
+  - Zero missing values for title, qualification code, NSQF level, or sector name.
+  - Resolved 1 duplicate qualification code (`QG-04-ES-00913-2023-V1-SCGJ`) via surrogate UUID primary keys with indexed code and composite unique constraint `(q_code, title)`.
+  - Published comprehensive audit report: `docs/nsqf_catalog_audit.md` & structured data: `docs/nsqf_dataset_audit.json`.
+- [x] **Excluded Sector Defensive Filter**:
+  - Enforced strict 15-sector exclusion policy: Judiciary, Indian Defence Forces, Legal Activities, Legislators, Musical Instruments, Optical Products, Postal Services, Printing, Public Administration, Railways, Real Estate, Religious Professionals, Shipping, Tobacco Industry, Unorganised Sector.
+  - Verified 0 of these 15 sectors exist in the supplied dataset (100% of the 2,810 courses remain eligible).
+- [x] **Decimal NSQF Levels**:
+  - Full support for 12 NSQF levels: Level 1.0 (14), 2.0 (180), 2.5 (117), 3.0 (557), 3.5 (126), 4.0 (843), 4.5 (263), 5.0 (430), 5.5 (118), 6.0 (149), 6.5 (8), 7.0 (5).
+  - Backed by PostgreSQL `NUMERIC(3, 1)`.
+- [x] **Persons with Disability (PwD) Preservation**:
+  - 231 dedicated courses under `Persons with Disability` sector plus keyword-identified roles with explicit disability category tagging (`VI`, `SHI`, `LD`, `ID`).
+- [x] **Database Schema & Idempotent Ingestion**:
+  - Additive migration `supabase/migrations/20261003000001_nsqf_nqr_catalog.sql` creating `nsqf_sectors` and `nsqf_qualifications` with indexes and RLS.
+  - CLI ingestion pipeline `scripts/ingest_nsqf_catalog.py` generating idempotent SQL seed `supabase/seed_nsqf_catalog.sql` (5.3 MB).
+- [x] **Backend API & Service Layer**:
+  - `GET /api/nsqf/sectors`: Returns all active industry sectors with course counts.
+  - `GET /api/nsqf/courses`: Search and multi-criteria filtering by sector, exact level, level range, hours range, PwD category, and keywords.
+  - `GET /api/nsqf/courses/{course_id:path}`: Detailed qualification retrieval supporting slash-separated codes.
+  - `GET /api/nsqf/stats`: Aggregate catalog statistics.
+  - Dual-mode operation: Supabase PostgreSQL PostgREST queries with automatic local parsed catalog fallback for offline/disconnected environments.
+- [x] **Automated Testing**:
+  - Added `backend/tests/test_nsqf_catalog.py` with 17 test cases covering normalization, filters, stats, PwD, and endpoints.
+  - Repository test suite at 94 passed backend tests with zero regressions.
 
 ---
 
