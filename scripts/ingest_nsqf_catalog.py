@@ -113,6 +113,7 @@ def main():
             print(f"ERROR during Supabase upsert: {exc}")
             print("You can apply the seed file directly via Supabase SQL editor:")
             print(f"  {args.generate_sql}")
+            sys.exit(1)
 
     print("\n==================================================")
     print("INGESTION PIPELINE COMPLETED SUCCESSFULLY")
