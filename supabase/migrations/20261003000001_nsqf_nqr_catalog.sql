@@ -22,7 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_nsqf_sectors_excluded ON nsqf_sectors(is_excluded
 CREATE TABLE IF NOT EXISTS nsqf_qualifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     q_code VARCHAR(100) NOT NULL,
-    title VARCHAR(255) NOT NULL,
+    title TEXT NOT NULL,
     sector_id VARCHAR(64) NOT NULL REFERENCES nsqf_sectors(id) ON DELETE RESTRICT,
     sector_name VARCHAR(150) NOT NULL,
     nsqf_level NUMERIC(3, 1) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS nsqf_qualifications (
     certifying_bodies TEXT,
     proposed_occupation TEXT,
     progression_pathway TEXT,
-    qualification_type VARCHAR(100),
+    qualification_type TEXT,
     adopted_qualification TEXT,
     training_delivery_hours TEXT,
     is_pwd BOOLEAN NOT NULL DEFAULT FALSE,
