@@ -178,3 +178,17 @@ export function completeAdaptiveInterview(interviewId, sessionToken) {
   });
 }
 
+export function interpretVoiceTranscript(interviewId, sessionToken, transcript, language = 'hi', questionId = null) {
+  return request(`/api/adaptive-interview/${encodeURIComponent(interviewId)}/interpret`, {
+    method: 'POST',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify({
+      transcript,
+      language,
+      question_id: questionId,
+      apply_to_profile: true,
+    }),
+  });
+}
+
+

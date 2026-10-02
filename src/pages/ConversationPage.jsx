@@ -14,6 +14,7 @@ import {
   submitAdaptiveAnswer,
   correctStructuredProfileField,
   completeAdaptiveInterview,
+  interpretVoiceTranscript,
 } from '../services/api';
 import AdaptiveInterviewView from '../components/AdaptiveInterviewView';
 import {
@@ -494,10 +495,10 @@ export default function ConversationPage({
   };
 
   const handleAdaptiveVoiceAnswer = async (transcript) => {
-    if (!adaptiveState?.current_question) return;
+    if (!adaptiveState?.current_question || !interviewSession || !beneficiarySession) return;
     const currentQ = adaptiveState.current_question;
-    let matchedVal = transcript;
-    let matchedLabel = transcript;
+    let matchedVal = null;
+    let matchedLabel = null;
 
     if (currentQ.options && currentQ.options.length > 0) {
       const labels = currentQ.options.map(o => o.label);
@@ -510,7 +511,43 @@ export default function ConversationPage({
         }
       }
     }
-    await handleSelectAdaptiveOption(matchedVal, matchedLabel);
+
+    if (matchedVal) {
+      // Deterministic fast-path when exact option matched
+      await handleSelectAdaptiveOption(matchedVal, matchedLabel);
+    } else {
+      // Conversational Groq Interpretation Layer
+      setIsInterviewSaving(true);
+      setInterviewError('');
+      try {
+        const res = await interpretVoiceTranscript(
+          interviewSession.id,
+          beneficiarySession.sessionToken,
+          transcript,
+          langCode,
+          currentQ.question_id,
+        );
+        if (res.updated_state) {
+          setAdaptiveState(res.updated_state);
+          if (res.updated_state.profile_summary) {
+            setAnswers(prev => ({
+              ...prev,
+              workInterest: res.updated_state.profile_summary.interested_sector_name || prev.workInterest,
+              education: res.updated_state.profile_summary.education_label || prev.education,
+              mobility: res.updated_state.profile_summary.mobility_preference || prev.mobility,
+              preference: res.updated_state.profile_summary.primary_goal || prev.preference,
+            }));
+          }
+          if (res.updated_state.is_completed) {
+            setCurrentStepIndex(INTERVIEW_STEPS.length + 3);
+          }
+        }
+      } catch (err) {
+        setInterviewError(err?.message || 'Failed to interpret speech. Please try again or select an option.');
+      } finally {
+        setIsInterviewSaving(false);
+      }
+    }
   };
 
   const handleCorrectProfileField = async (fieldName, value) => {

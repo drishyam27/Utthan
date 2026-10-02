@@ -18,6 +18,10 @@ from app.schemas.adaptive_interview import (
     ProfileFieldCorrectionRequest,
     StructuredBeneficiaryProfile,
 )
+from app.schemas.groq_extraction import (
+    InterpretTranscriptRequest,
+    InterpretTranscriptResponse,
+)
 from app.schemas.beneficiary import LanguageCode
 from app.schemas.common import ErrorResponse
 from app.schemas.interview import InterviewCreateRequest
@@ -28,6 +32,7 @@ from app.services.adaptive_interview_service import (
     submit_answer_to_interview,
     update_profile_field,
 )
+from app.services.groq_service import interpret_and_apply_to_session
 from app.services.beneficiary_service import (
     CapabilityContext,
     CapabilityDeniedError,
@@ -200,6 +205,48 @@ def submit_answer(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to record answer: {str(exc)}",
+        )
+
+
+@router.post(
+    "/{interview_id}/interpret",
+    response_model=InterpretTranscriptResponse,
+    summary="Interpret voice transcript or conversational text with Groq LLM",
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid submission"},
+        404: {"model": ErrorResponse, "description": "Interview not found"},
+    },
+)
+async def interpret_transcript(
+    interview_id: UUID = Path(...),
+    payload: InterpretTranscriptRequest = ...,
+    capability: Optional[CapabilityContext] = Depends(_get_optional_capability),
+    client: Client = Depends(get_supabase_client),
+):
+    """
+    Interprets natural-language transcript (voice/text) with Groq LLM assistance,
+    evaluates contradictions, detects ambiguity/clarification needs, and updates the profile.
+    """
+    _, beneficiary_id = _resolve_interview_and_beneficiary(interview_id, client, capability)
+    try:
+        return await interpret_and_apply_to_session(
+            client=client,
+            interview_id=interview_id,
+            beneficiary_id=beneficiary_id,
+            transcript=payload.transcript,
+            lang=payload.language,
+            question_id=payload.question_id,
+            apply_to_profile=payload.apply_to_profile,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Failed to interpret transcript with Groq")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to interpret dialogue: {str(exc)}",
         )
 
 

@@ -63,6 +63,21 @@ class Settings:
         os.getenv("SARVAM_STT_TIMEOUT_SECONDS", "15")
     )
 
+    # Groq LLM Conversational Understanding Configuration
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "").strip()
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+    GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1").strip()
+    GROQ_TIMEOUT_SECONDS: float = float(
+        os.getenv("GROQ_TIMEOUT_SECONDS", "12.0")
+    )
+
+    @property
+    def is_groq_configured(self) -> bool:
+        """Returns True if Groq API key is provided and non-placeholder."""
+        if not self.GROQ_API_KEY or "your_groq" in self.GROQ_API_KEY or len(self.GROQ_API_KEY) < 10:
+            return False
+        return True
+
     @property
     def is_sarvam_configured(self) -> bool:
         """Returns True if Sarvam API key is provided and non-placeholder."""
