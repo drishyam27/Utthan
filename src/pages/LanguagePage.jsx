@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { LANGUAGES } from '../data/languages';
-import { Check, Globe, ArrowLeft, Sparkles, Search, Mic, Volume2 } from 'lucide-react';
+import { Check, Globe, ArrowLeft, Sparkles, Search, Mic, Volume2, Loader2 } from 'lucide-react';
 import { createSpeechRecognizer, speakWithSarvamAI, stopAIVoice } from '../services/aiService';
+import { isAudioRecordingSupported, AudioRecorder } from '../services/audioRecorder';
+import { transcribeAudio } from '../services/api';
 import { detectLanguageFromVoice } from '../data/uiTranslations';
 
 export default function LanguagePage({ 
@@ -12,9 +14,12 @@ export default function LanguagePage({
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isListeningVoice, setIsListeningVoice] = useState(false);
+  const [isTranscribingVoice, setIsTranscribingVoice] = useState(false);
   const [voiceDetectedText, setVoiceDetectedText] = useState('');
   const [detectedLanguage, setDetectedLanguage] = useState(null);
+  const [voiceError, setVoiceError] = useState('');
   const activeRecognizer = useRef(null);
+  const audioRecorderRef = useRef(null);
 
   const filteredLanguages = LANGUAGES.filter((lang) => {
     const q = searchQuery.toLowerCase().trim();
@@ -26,14 +31,55 @@ export default function LanguagePage({
     );
   });
 
-  const startVoiceLanguageSelection = () => {
+  useEffect(() => {
+    return () => {
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.cancel();
+        audioRecorderRef.current = null;
+      }
+      if (activeRecognizer.current) {
+        try { activeRecognizer.current.stop(); } catch {}
+        activeRecognizer.current = null;
+      }
+    };
+  }, []);
+
+  const startVoiceLanguageSelection = async () => {
     stopAIVoice();
     setVoiceDetectedText('');
     setDetectedLanguage(null);
-    setIsListeningVoice(true);
+    setVoiceError('');
 
+    // Primary: MediaRecorder -> Sarvam STT
+    if (isAudioRecordingSupported()) {
+      try {
+        const recorder = new AudioRecorder({
+          maxDurationMs: 20000,
+          onMaxDurationReached: () => {
+            stopVoiceLanguageSelection();
+          },
+        });
+        await recorder.start();
+        audioRecorderRef.current = recorder;
+        setIsListeningVoice(true);
+        return;
+      } catch (err) {
+        if (err.message === 'PERMISSION_DENIED') {
+          setVoiceError('Microphone permission was not granted.');
+          setIsListeningVoice(false);
+          return;
+        } else if (err.message === 'DEVICE_NOT_FOUND') {
+          setVoiceError('No microphone detected.');
+          setIsListeningVoice(false);
+          return;
+        }
+      }
+    }
+
+    // Fallback: Browser Web Speech API
+    setIsListeningVoice(true);
     const recognizer = createSpeechRecognizer({
-      languageId: 'en', // Multi-accent English / Indic recognition
+      languageId: 'en',
       onResult: (transcript, isFinal) => {
         setVoiceDetectedText(transcript);
         const match = detectLanguageFromVoice(transcript, LANGUAGES);
@@ -62,10 +108,45 @@ export default function LanguagePage({
       }
     } else {
       setIsListeningVoice(false);
+      setVoiceError('Voice input not supported in this browser.');
     }
   };
 
-  const stopVoiceLanguageSelection = () => {
+  const stopVoiceLanguageSelection = async () => {
+    if (audioRecorderRef.current) {
+      const recorder = audioRecorderRef.current;
+      audioRecorderRef.current = null;
+      setIsListeningVoice(false);
+      setIsTranscribingVoice(true);
+
+      try {
+        const audioResult = await recorder.stop();
+        if (!audioResult?.blob || audioResult.blob.size === 0) {
+          setIsTranscribingVoice(false);
+          return;
+        }
+
+        const result = await transcribeAudio(audioResult.blob, 'unknown');
+        const transcript = result?.transcript?.trim();
+        setIsTranscribingVoice(false);
+
+        if (transcript) {
+          setVoiceDetectedText(transcript);
+          const match = detectLanguageFromVoice(transcript, LANGUAGES);
+          if (match) {
+            setDetectedLanguage(match);
+            confirmAndSelectLanguage(match);
+          } else {
+            setVoiceError(`Heard "${transcript}". Please tap your language below.`);
+          }
+        }
+      } catch (err) {
+        setIsTranscribingVoice(false);
+        setVoiceError('Could not process voice. Please tap an option below.');
+      }
+      return;
+    }
+
     if (activeRecognizer.current) {
       try { activeRecognizer.current.stop(); } catch (e) {}
     }
@@ -128,15 +209,26 @@ export default function LanguagePage({
 
         <button
           onClick={isListeningVoice ? stopVoiceLanguageSelection : startVoiceLanguageSelection}
+          disabled={isTranscribingVoice}
           className={`relative group px-6 py-3 rounded-full flex items-center gap-3 transition-all duration-300 shadow-md active:scale-95 mb-2 ${
             isListeningVoice 
               ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-200' 
-              : 'bg-[#134e40] text-white hover:bg-[#0d3b30]'
+              : isTranscribingVoice
+                ? 'bg-amber-600 text-white animate-pulse ring-4 ring-amber-200'
+                : 'bg-[#134e40] text-white hover:bg-[#0d3b30]'
           }`}
         >
-          <Mic className={`w-5 h-5 ${isListeningVoice ? 'animate-bounce' : ''}`} />
+          {isTranscribingVoice ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Mic className={`w-5 h-5 ${isListeningVoice ? 'animate-bounce' : ''}`} />
+          )}
           <span className="text-sm font-semibold">
-            {isListeningVoice ? "Listening... Say your language!" : "Tap to Speak Language (e.g. 'বাংলা' or 'Hindi')"}
+            {isTranscribingVoice 
+              ? "Transcribing voice (Sarvam AI)..."
+              : isListeningVoice 
+                ? "Listening... Tap to finish & send" 
+                : "Tap to Speak Language (e.g. 'বাংলা' or 'Hindi')"}
           </span>
         </button>
 
@@ -144,6 +236,12 @@ export default function LanguagePage({
         {isListeningVoice && (
           <p className="text-xs font-medium text-[#134e40] animate-pulse">
             {voiceDetectedText ? `Hearing: "${voiceDetectedText}"...` : "Say 'Bengali', 'Hindi', 'Tamil', 'English', 'Odia', etc..."}
+          </p>
+        )}
+
+        {voiceError && !isListeningVoice && (
+          <p className="mt-2 text-xs font-medium text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+            {voiceError}
           </p>
         )}
 

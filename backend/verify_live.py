@@ -76,6 +76,7 @@ assert "/api/locations/states" in openapi["paths"]
 assert "/api/locations/resolve" in openapi["paths"]
 assert "/api/opportunities" in openapi["paths"]
 assert "/api/beneficiaries/{beneficiary_id}/recommendations" in openapi["paths"]
+assert "/api/voice/transcribe" in openapi["paths"]
 
 print("\n--- STEP 12: LOCATION RESOLUTION CONTRACT ---")
 r_invalid_resolve = httpx.post(

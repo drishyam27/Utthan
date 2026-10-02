@@ -52,6 +52,24 @@ class Settings:
         os.getenv("LOCATION_PROVIDER_TIMEOUT_SECONDS", "8")
     )
 
+    # Sarvam AI STT Configuration
+    SARVAM_API_KEY: str = os.getenv("SARVAM_API_KEY", "").strip()
+    SARVAM_STT_URL: str = os.getenv(
+        "SARVAM_STT_URL",
+        "https://api.sarvam.ai/speech-to-text"
+    ).strip()
+    SARVAM_STT_MODEL: str = os.getenv("SARVAM_STT_MODEL", "saaras:v4").strip()
+    SARVAM_STT_TIMEOUT_SECONDS: float = float(
+        os.getenv("SARVAM_STT_TIMEOUT_SECONDS", "15")
+    )
+
+    @property
+    def is_sarvam_configured(self) -> bool:
+        """Returns True if Sarvam API key is provided and non-placeholder."""
+        if not self.SARVAM_API_KEY or "your_sarvam" in self.SARVAM_API_KEY:
+            return False
+        return True
+
     @property
     def is_supabase_configured(self) -> bool:
         """Returns True if Supabase credentials are provided and non-placeholder."""

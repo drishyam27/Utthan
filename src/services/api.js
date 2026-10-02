@@ -16,7 +16,9 @@ async function request(path, options = {}) {
       ...options,
       headers: {
         Accept: 'application/json',
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.body && !(typeof FormData !== 'undefined' && options.body instanceof FormData)
+          ? { 'Content-Type': 'application/json' }
+          : {}),
         ...options.headers,
       },
     });
@@ -115,5 +117,20 @@ export function completeInterview(interviewId, sessionToken, expectedRevision) {
 export function fetchRecommendations(beneficiaryId, sessionToken) {
   return request(`/api/beneficiaries/${encodeURIComponent(beneficiaryId)}/recommendations`, {
     headers: capabilityHeaders(sessionToken),
+  });
+}
+
+export function transcribeAudio(audioBlob, languageHint, sessionToken) {
+  const formData = new FormData();
+  const filename = audioBlob.type?.includes('wav') ? 'audio.wav' : 'audio.webm';
+  formData.append('file', audioBlob, filename);
+  if (languageHint) {
+    formData.append('language', languageHint);
+  }
+
+  return request('/api/voice/transcribe', {
+    method: 'POST',
+    headers: sessionToken ? capabilityHeaders(sessionToken) : {},
+    body: formData,
   });
 }

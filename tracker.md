@@ -6,11 +6,11 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 2C-5 Complete — Frontend Recommendation Integration Established
-- **Current Development Phase**: Phase 2C-5 (Frontend Recommendation Integration)
+- **Status**: Phase 2C-6 Complete — Multilingual Voice Input / STT Integrated
+- **Current Development Phase**: Phase 2C-6 (Multilingual Voice Input / Speech-to-Text)
 - **Next Development Phase**: Phase 3 (Adaptive Voice Interview & Profile Extraction)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
-- **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL
+- **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL, Sarvam AI STT
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
 
 ---
@@ -22,7 +22,7 @@
 | **Visual UI & Design System** | **COMPLETED** | Polished, responsive cultural theme, light-calibrated mode | Preserve without visual redesign |
 | **Multilingual UI (23 Langs)** | **COMPLETED** | UI translations dictionary and native scripts active | Maintain and keep synced |
 | **Voice Playback (TTS)** | **PARTIALLY COMPLETED** | Sarvam AI Bulbul:v3 active for 11 languages; browser fallback for 12 | Expand coverage in voice service |
-| **Voice Input (STT)** | **PARTIALLY COMPLETED** | Native browser Web Speech API (Chromium-supported) | Evaluate Bhashini / Sarvam STT |
+| **Voice Input (STT)** | **COMPLETED** | Backend-integrated Sarvam AI STT (`saaras:v4`) at `POST /api/voice/transcribe` with zero disk persistence and browser Web Speech fallback | Feed transcripts into Groq LLM layer in Phase 3 |
 | **State & District Dataset** | **COMPLETED** | Authoritative 36 States/UTs & 784 districts from LGD master in `canonicalLocations.json` & `locations.js`; automatic resolution validates against the same Supabase master | Use canonical IDs in later profile/recommendation work |
 | **Verified Opportunities Data**| **COMPLETED** | 7 verified government schemes with NSQF & portal source links | Served via `/api/opportunities` |
 | **Skills Catalog (NSQF)** | **COMPLETED** | 11 standardized skills with official SSC QP codes & levels | Embedded in opportunity details |
@@ -131,6 +131,17 @@
 - [x] Preserved existing Utthan cultural design system without generic SaaS redesign, fake AI badges, or invented statistics.
 - [x] Enforced strict architectural rule: zero client-side scoring or eligibility recalculation; backend remains single source of truth.
 - [x] Added automated frontend unit tests for recommendation contract mapping (`tests/recommendationsFrontend.test.js`).
+
+### ✅ Phase 2C-6: Multilingual Voice Input / STT Integration (COMPLETED)
+- [x] Implemented dedicated backend STT service (`backend/app/services/stt_service.py`) integrating Sarvam AI `saaras:v4` Speech-to-Text API.
+- [x] Created capability endpoint `POST /api/voice/transcribe` with in-memory audio streaming and 10MB payload size validation.
+- [x] Mapped application language IDs (`hi`, `bn`, `ta`, `te`, `or` -> `od-IN`, `dgo` -> `doi-IN`, etc.) to official Sarvam BCP-47 codes.
+- [x] Secured API credentials server-side (`SARVAM_API_KEY` in `backend/.env`); browser never receives private provider keys.
+- [x] Created client audio recording utility (`src/services/audioRecorder.js`) using `MediaRecorder` with explicit lifecycle and resource cleanup.
+- [x] Integrated voice input across `ConversationPage` (Step 0 Language, Step 1 Name, Steps 3-6 Questions) and `LanguagePage` with clear UX states (`idle`, `recording`, `transcribing`, `error`).
+- [x] Preserved browser Web Speech API as graceful fallback if `MediaRecorder` is unsupported.
+- [x] Added automated backend test suite (`backend/tests/test_voice.py`) passing 9 focused checks (77/77 backend tests passing).
+- [x] Added automated frontend test suite (`tests/voiceIntegration.test.js`) validating option matching and recording support (7/7 test suites passing).
 
 ### ⏳ Phase 3: Adaptive Voice Interview & Profile Extraction (NOT STARTED)
 - [ ] Onboarding flow capturing Beneficiary Name, State, and District.

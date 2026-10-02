@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Volume2, VolumeX, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, RefreshCw, Globe, MapPin, UserRound, Check } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, RefreshCw, Globe, MapPin, UserRound, Check, Loader2 } from 'lucide-react';
 import { speakWithSarvamAI, stopAIVoice, createSpeechRecognizer } from '../services/aiService';
+import { isAudioRecordingSupported, AudioRecorder } from '../services/audioRecorder';
 import { LANGUAGES } from '../data/languages';
 import { detectLanguageFromVoice } from '../data/uiTranslations';
 import {
@@ -8,12 +9,49 @@ import {
   createOrResumeInterview,
   resolveLocation,
   updateInterview,
+  transcribeAudio,
 } from '../services/api';
 import {
   getInterviewResumeStep,
   hydrateInterviewAnswers,
   toInterviewResponses,
 } from '../services/interviewPersistence';
+
+function matchTranscriptToOption(transcript, options) {
+  if (!transcript || !Array.isArray(options) || options.length === 0) return null;
+  const clean = transcript.toLowerCase().trim();
+
+  // 1. Direct equality
+  const directMatch = options.find(opt => opt.toLowerCase().trim() === clean);
+  if (directMatch) return directMatch;
+
+  // 2. Direct equality without emojis
+  const stripEmojis = (str) => str.replace(/[\p{Emoji}\p{Extended_Pictographic}]/gu, '').toLowerCase().trim();
+  const cleanStripped = stripEmojis(transcript);
+
+  const emojiStrippedMatch = options.find(opt => stripEmojis(opt) === cleanStripped);
+  if (emojiStrippedMatch) return emojiStrippedMatch;
+
+  // 3. Substring match (either contains the other)
+  const substringMatch = options.find(opt => {
+    const stripped = stripEmojis(opt);
+    return cleanStripped.includes(stripped) || (stripped.length > 5 && stripped.includes(cleanStripped));
+  });
+  if (substringMatch) return substringMatch;
+
+  // 4. Keyword token match
+  const words = cleanStripped.split(/[\s,()/-]+/).filter(w => w.length >= 3);
+  for (const opt of options) {
+    const optWords = stripEmojis(opt).split(/[\s,()/-]+/).filter(w => w.length >= 3);
+    for (const word of words) {
+      if (optWords.some(ow => ow.includes(word) || word.includes(ow))) {
+        return opt;
+      }
+    }
+  }
+
+  return null;
+}
 
 const INTERVIEW_STEPS = [
   {
@@ -141,6 +179,8 @@ export default function ConversationPage({
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
+  const [voiceState, setVoiceState] = useState('idle'); // 'idle' | 'recording' | 'transcribing' | 'error'
+  const [voiceError, setVoiceError] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [interviewSession, setInterviewSession] = useState(null);
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);
@@ -150,6 +190,7 @@ export default function ConversationPage({
   const lastSpokenStepRef = useRef(-1);
   const hasSpokenGreetingRef = useRef(false);
   const activeRecognizer = useRef(null);
+  const audioRecorderRef = useRef(null);
   const locationAttemptedRef = useRef(false);
   const interviewLoadKeyRef = useRef('');
 
@@ -468,37 +509,109 @@ export default function ConversationPage({
     }
   };
 
-  // Voice recording
-  const startVoiceInput = () => {
+  // Reset voice state on step switch
+  useEffect(() => {
+    setVoiceError('');
+    setLiveTranscript('');
+    if (audioRecorderRef.current) {
+      audioRecorderRef.current.cancel();
+      audioRecorderRef.current = null;
+    }
+    if (activeRecognizer.current) {
+      try { activeRecognizer.current.stop(); } catch {}
+      activeRecognizer.current = null;
+    }
+    setIsListening(false);
+    setVoiceState('idle');
+  }, [currentStepIndex]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.cancel();
+        audioRecorderRef.current = null;
+      }
+      if (activeRecognizer.current) {
+        try { activeRecognizer.current.stop(); } catch {}
+        activeRecognizer.current = null;
+      }
+    };
+  }, []);
+
+  // Voice recording via backend Sarvam STT with browser SpeechRecognition fallback
+  const startVoiceInput = async () => {
     stopAIVoice();
+    setVoiceError('');
     setLiveTranscript('');
 
+    // Primary Path: MediaRecorder -> Backend Sarvam STT
+    if (isAudioRecordingSupported()) {
+      try {
+        const recorder = new AudioRecorder({
+          maxDurationMs: 25000,
+          onMaxDurationReached: () => {
+            stopVoiceInput();
+          },
+        });
+        await recorder.start();
+        audioRecorderRef.current = recorder;
+        setIsListening(true);
+        setVoiceState('recording');
+        return;
+      } catch (err) {
+        if (err.message === 'PERMISSION_DENIED') {
+          setVoiceError('Microphone permission was not granted. Please allow microphone access in your browser settings.');
+          setVoiceState('error');
+          setIsListening(false);
+          return;
+        } else if (err.message === 'DEVICE_NOT_FOUND') {
+          setVoiceError('No microphone detected on your device.');
+          setVoiceState('error');
+          setIsListening(false);
+          return;
+        }
+        // Other errors fall through to browser recognizer fallback
+      }
+    }
+
+    // Fallback Path: Browser Web Speech API
     const recognizer = createSpeechRecognizer({
       languageId: isLanguageStep ? 'en' : langCode,
       onResult: (transcript, isFinal) => {
         setLiveTranscript(transcript);
 
         if (isLanguageStep) {
-          // Detect spoken language
           const detected = detectLanguageFromVoice(transcript, LANGUAGES);
           if (detected) {
             setIsListening(false);
+            setVoiceState('idle');
             handleConfirmLanguage(detected);
           }
+        } else if (isNameStep) {
+          if (transcript.trim()) {
+            setNameInput(transcript.trim());
+          }
         } else {
-          // Regular interview answer
-          if (isFinal && transcript.trim()) {
+          const currentOptions = currentInterviewStep
+            ? (currentInterviewStep.options[langCode] || currentInterviewStep.options.hi || currentInterviewStep.options.en)
+            : [];
+          const matched = matchTranscriptToOption(transcript, currentOptions);
+          if (isFinal && matched) {
             setIsListening(false);
-            handleSelectAnswer(transcript);
+            setVoiceState('idle');
+            handleSelectAnswer(matched);
           }
         }
       },
       onError: (err) => {
-        console.warn("Speech error:", err);
+        console.warn("Speech fallback error:", err);
         setIsListening(false);
+        setVoiceState('idle');
       },
       onEnd: () => {
         setIsListening(false);
+        setVoiceState('idle');
       }
     });
 
@@ -506,28 +619,104 @@ export default function ConversationPage({
       try {
         recognizer.start();
         setIsListening(true);
+        setVoiceState('recording');
         activeRecognizer.current = recognizer;
-      } catch (e) {
+      } catch {
         setIsListening(false);
+        setVoiceState('idle');
       }
     } else {
       setIsListening(false);
+      setVoiceState('idle');
+      setVoiceError('Voice input is not supported in this browser. Please tap an option below.');
     }
   };
 
-  const stopVoiceInput = () => {
+  const stopVoiceInput = async () => {
+    // 1. Primary Path: Process audio recorded by MediaRecorder via Sarvam STT
+    if (audioRecorderRef.current) {
+      const recorder = audioRecorderRef.current;
+      audioRecorderRef.current = null;
+      setIsListening(false);
+      setVoiceState('transcribing');
+
+      try {
+        const audioResult = await recorder.stop();
+        if (!audioResult?.blob || audioResult.blob.size === 0) {
+          setVoiceState('idle');
+          return;
+        }
+
+        const languageHint = isLanguageStep ? 'unknown' : langCode;
+        const result = await transcribeAudio(
+          audioResult.blob,
+          languageHint,
+          beneficiarySession?.sessionToken,
+        );
+
+        const transcript = result?.transcript?.trim();
+        setVoiceState('idle');
+
+        if (!transcript) {
+          setVoiceError('We could not detect clear speech. Please try speaking again.');
+          return;
+        }
+
+        setLiveTranscript(transcript);
+
+        if (isLanguageStep) {
+          const detected = detectLanguageFromVoice(transcript, LANGUAGES);
+          if (detected) {
+            handleConfirmLanguage(detected);
+          } else {
+            setVoiceError(`Heard: "${transcript}". Please tap your preferred language.`);
+          }
+        } else if (isNameStep) {
+          setNameInput(transcript);
+        } else if (currentInterviewStep) {
+          const currentOptions = currentInterviewStep.options[langCode]
+            || currentInterviewStep.options.hi
+            || currentInterviewStep.options.en
+            || [];
+          const matched = matchTranscriptToOption(transcript, currentOptions);
+          if (matched) {
+            handleSelectAnswer(matched);
+          } else {
+            setVoiceError(`Recognized: "${transcript}". Please tap the closest matching option below.`);
+          }
+        }
+      } catch (err) {
+        setVoiceState('error');
+        setVoiceError(err?.message || 'Voice recognition is temporarily unavailable. Please tap an option.');
+      }
+      return;
+    }
+
+    // 2. Fallback Path: Browser Web Speech API
     if (activeRecognizer.current) {
-      try { activeRecognizer.current.stop(); } catch (e) {}
+      try { activeRecognizer.current.stop(); } catch {}
+      activeRecognizer.current = null;
     }
     setIsListening(false);
+    setVoiceState('idle');
+
     if (liveTranscript.trim()) {
       if (isLanguageStep) {
         const detected = detectLanguageFromVoice(liveTranscript, LANGUAGES);
         if (detected) {
           handleConfirmLanguage(detected);
         }
-      } else {
-        handleSelectAnswer(liveTranscript);
+      } else if (isNameStep) {
+        setNameInput(liveTranscript.trim());
+      } else if (currentInterviewStep) {
+        const currentOptions = currentInterviewStep.options[langCode]
+          || currentInterviewStep.options.hi
+          || currentInterviewStep.options.en
+          || [];
+        const matched = matchTranscriptToOption(liveTranscript, currentOptions);
+        if (matched) {
+          handleSelectAnswer(matched);
+        }
       }
     }
   };
@@ -599,12 +788,15 @@ export default function ConversationPage({
           <div className="mb-6 flex flex-col items-center">
             <button
               onClick={isListening ? stopVoiceInput : startVoiceInput}
+              disabled={voiceState === 'transcribing'}
               className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl active:scale-95 focus:outline-none ${
                 isListening 
                   ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-300' 
-                  : 'bg-[#134e40] text-white hover:bg-[#0d3b30] hover:scale-105'
+                  : voiceState === 'transcribing'
+                    ? 'bg-amber-600 text-white animate-pulse ring-4 ring-amber-200'
+                    : 'bg-[#134e40] text-white hover:bg-[#0d3b30] hover:scale-105'
               }`}
-              title="Tap and say your language"
+              title={isListening ? "Tap to finish & transcribe" : "Tap and say your language"}
             >
               {isListening && (
                 <>
@@ -612,16 +804,28 @@ export default function ConversationPage({
                   <span className="absolute -inset-2 rounded-full border-2 border-red-500 animate-pulse opacity-50" />
                 </>
               )}
-              <Mic className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
+              {voiceState === 'transcribing' ? (
+                <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 relative z-10 animate-spin" />
+              ) : (
+                <Mic className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
+              )}
             </button>
 
             <span className="mt-3 text-xs sm:text-sm font-semibold text-[#134e40]">
-              {isListening 
-                ? (liveTranscript ? `Hearing: "${liveTranscript}"...` : "Listening... Say 'বাংলা', 'Hindi', 'Tamil'...")
-                : isSpeaking 
-                  ? "Speaking greeting aloud (Sarvam AI)..."
-                  : "Tap to Speak your language"}
+              {voiceState === 'transcribing'
+                ? "Transcribing your voice (Sarvam AI)..."
+                : isListening 
+                  ? (liveTranscript ? `Hearing: "${liveTranscript}"...` : "Listening... Tap mic when finished speaking.")
+                  : isSpeaking 
+                    ? "Speaking greeting aloud (Sarvam AI)..."
+                    : "Tap to Speak your language"}
             </span>
+
+            {voiceError && (
+              <p className="mt-2 text-xs text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 font-medium max-w-sm">
+                {voiceError}
+              </p>
+            )}
           </div>
 
           {/* 22 Language Cards Grid */}
@@ -675,16 +879,52 @@ export default function ConversationPage({
             What should we call you?
           </h2>
           <p className="text-sm text-[#37474F] mb-6">Tell us your name so we can personalize your Utthan journey.</p>
-          <input
-            value={nameInput}
-            onChange={(event) => setNameInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') continueFromName();
-            }}
-            placeholder="Enter your name"
-            aria-label="Your name"
-            className="w-full px-4 py-3 rounded-2xl border border-[#b8ded6] bg-white text-[#263238] focus:outline-none focus:ring-2 focus:ring-[#134e40]/30 mb-5"
-          />
+          <div className="relative mb-5">
+            <input
+              value={nameInput}
+              onChange={(event) => setNameInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') continueFromName();
+              }}
+              placeholder="Type or speak your name"
+              aria-label="Your name"
+              className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-[#b8ded6] bg-white text-[#263238] focus:outline-none focus:ring-2 focus:ring-[#134e40]/30"
+            />
+            <button
+              type="button"
+              onClick={isListening ? stopVoiceInput : startVoiceInput}
+              disabled={voiceState === 'transcribing'}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
+                isListening
+                  ? 'bg-red-600 text-white animate-pulse'
+                  : voiceState === 'transcribing'
+                    ? 'bg-amber-600 text-white animate-pulse'
+                    : 'bg-[#FAF7F0] text-[#134e40] hover:bg-[#134e40] hover:text-white border border-[#b8ded6]'
+              }`}
+              title={isListening ? "Tap to finish speaking" : "Speak your name"}
+            >
+              {voiceState === 'transcribing' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+          {isListening && (
+            <p className="text-xs text-red-600 font-semibold mb-3 animate-pulse">
+              Listening... Speak your name aloud, then tap mic to stop.
+            </p>
+          )}
+          {voiceState === 'transcribing' && (
+            <p className="text-xs text-amber-700 font-semibold mb-3 animate-pulse">
+              Transcribing name (Sarvam AI)...
+            </p>
+          )}
+          {voiceError && (
+            <p className="text-xs text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 font-medium mb-3">
+              {voiceError}
+            </p>
+          )}
           <div className="w-full flex items-center justify-between pt-4 border-t border-gray-100 text-xs text-[#718078]">
             <button
               onClick={() => setCurrentStepIndex(0)}
@@ -846,12 +1086,15 @@ export default function ConversationPage({
           <div className="mb-6 flex flex-col items-center">
             <button
               onClick={isListening ? stopVoiceInput : startVoiceInput}
+              disabled={voiceState === 'transcribing'}
               className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl active:scale-95 focus:outline-none ${
                 isListening 
                   ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-300' 
-                  : 'bg-[#134e40] text-white hover:bg-[#0d3b30] hover:scale-105'
+                  : voiceState === 'transcribing'
+                    ? 'bg-amber-600 text-white animate-pulse ring-4 ring-amber-200'
+                    : 'bg-[#134e40] text-white hover:bg-[#0d3b30] hover:scale-105'
               }`}
-              title="Tap to Speak your answer"
+              title={isListening ? "Tap to finish & transcribe" : "Tap to Speak your answer"}
             >
               {isListening && (
                 <>
@@ -859,16 +1102,28 @@ export default function ConversationPage({
                   <span className="absolute -inset-2 rounded-full border-2 border-red-500 animate-pulse opacity-50" />
                 </>
               )}
-              <Mic className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
+              {voiceState === 'transcribing' ? (
+                <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 relative z-10 animate-spin" />
+              ) : (
+                <Mic className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
+              )}
             </button>
 
             <span className="mt-3 text-xs sm:text-sm font-semibold text-[#134e40]">
-              {isListening 
-                ? (liveTranscript ? `"${liveTranscript}"` : `Listening in ${currentLanguage.nativeName}... Speak now!`)
-                : isSpeaking 
-                  ? "Speaking question aloud (Sarvam AI)..."
-                  : "Tap to Speak your answer"}
+              {voiceState === 'transcribing'
+                ? "Transcribing your answer (Sarvam AI)..."
+                : isListening 
+                  ? (liveTranscript ? `"${liveTranscript}"` : `Listening in ${currentLanguage.nativeName}... Tap mic when finished`)
+                  : isSpeaking 
+                    ? "Speaking question aloud (Sarvam AI)..."
+                    : "Tap to Speak your answer"}
             </span>
+
+            {voiceError && (
+              <p className="mt-2 text-xs text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 font-medium max-w-md">
+                {voiceError}
+              </p>
+            )}
           </div>
 
           {/* Option Cards */}

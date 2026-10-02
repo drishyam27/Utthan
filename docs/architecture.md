@@ -309,10 +309,28 @@ Beneficiary Profile + Completed Interview Responses
 
 ## 4. Voice & Multilingual Architecture
 
-### Speech-to-Text (STT)
-* **Current**: Native Browser Web Speech API (`window.webkitSpeechRecognition`).
-* **Limitation**: Requires Chromium browsers (Chrome/Edge desktop, Chrome Android).
-* **Future**: Server-side Bhashini Speech-to-Text once official approvals and API keys are provisioned.
+### Speech-to-Text (STT) (Phase 2C-6 Implemented)
+* **Primary Provider**: Sarvam AI `saaras:v4` Multilingual Speech-to-Text API (`POST https://api.sarvam.ai/speech-to-text`).
+* **Backend Endpoint**: `POST /api/voice/transcribe` (multipart/form-data with in-memory streaming).
+* **Security & Credential Isolation**:
+  - `SARVAM_API_KEY` is loaded exclusively by the backend (`Settings.SARVAM_API_KEY`).
+  - Browser JavaScript bundles never receive or store the Sarvam API key.
+  - Rate limiting (429), timeouts (504), and upstream errors (502) are sanitized so no keys or internal URLs leak to the client.
+* **Privacy & In-Memory Processing**:
+  - Voice recordings are streamed in-memory via `UploadFile.read()`.
+  - Zero disk caching or persistent storage of citizen voice recordings.
+  - Memory buffers are released immediately upon completion of the transcription request.
+* **Audio Capture & Codecs**:
+  - Browser client uses `MediaRecorder` API via `src/services/audioRecorder.js`.
+  - Supports `audio/webm`, `audio/wav`, `audio/ogg`, and `audio/mp4` containers up to 10 MB.
+  - Client state machine manages explicit states: `idle`, `recording`, `transcribing`, and `error`.
+* **Language Support (22 Official Languages + Indian English)**:
+  - Maps Utthan language IDs to official BCP-47 codes: `hi-IN`, `bn-IN`, `ta-IN`, `te-IN`, `mr-IN`, `gu-IN`, `kn-IN`, `ml-IN`, `pa-IN`, `od-IN`, `as-IN`, `mai-IN`, `sa-IN`, `ne-IN`, `kok-IN`, `sd-IN`, `ks-IN`, `doi-IN`, `mni-IN`, `brx-IN`, `sat-IN`, `en-IN`.
+  - Falls back to `unknown` for automatic language detection by the provider.
+* **Fallback Strategy**:
+  - If `MediaRecorder` is unsupported on older browsers or mobile web views, gracefully falls back to the native Chromium Web Speech API (`SpeechRecognition`).
+* **Downstream Integration**:
+  - Transcripts flow directly into conversational input and option matcher (`matchTranscriptToOption`), maintaining strict parity with persisted interview schemas. Groq LLM integration will consume these transcripts in Phase 3.
 
 ### Text-to-Speech (TTS)
 * **Current**: Sarvam AI API (`Bulbul:v3`) with single-session concurrency guard and browser `speechSynthesis` fallback.
