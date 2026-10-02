@@ -172,25 +172,183 @@ def get_or_initialize_profile(
     return profile
 
 
+import re
+
+
+def normalize_education(val: Any) -> str:
+    """Canonicalize education level preserving full granularity."""
+    if not val:
+        return "none"
+    s = str(val).strip().lower().replace("-", "_").replace(" ", "_")
+    mapping = {
+        "none": "none",
+        "no_formal": "no_formal",
+        "no_formal_education": "no_formal",
+        "illiterate": "no_formal",
+        "literate_read_write": "literate_read_write",
+        "read_write": "literate_read_write",
+        "literate": "literate_read_write",
+        "5th": "5th",
+        "5th_pass": "5th",
+        "class_5": "5th",
+        "6th": "6th",
+        "6th_pass": "6th",
+        "class_6": "6th",
+        "7th": "7th",
+        "7th_pass": "7th",
+        "class_7": "7th",
+        "8th": "8th",
+        "8th_pass": "8th",
+        "class_8": "8th",
+        "9th": "9th",
+        "9th_pass": "9th",
+        "class_9": "9th",
+        "10th": "10th",
+        "10th_pass": "10th",
+        "class_10": "10th",
+        "matric": "10th",
+        "11th": "11th",
+        "11th_pass": "11th",
+        "class_11": "11th",
+        "12th": "12th",
+        "12th_pass": "12th",
+        "class_12": "12th",
+        "inter": "12th",
+        "1st_year_diploma": "1st_year_diploma",
+        "ug_diploma": "ug_diploma",
+        "diploma": "diploma",
+        "polytechnic": "diploma",
+        "ug": "ug",
+        "undergraduate": "ug",
+        "graduate": "graduate",
+        "post_graduate": "post_graduate",
+        "pg": "post_graduate",
+        "phd": "phd",
+        "doctorate": "phd",
+        "previous_nsqf": "previous_nsqf",
+        "iti_instructor_cits": "iti_instructor_cits",
+    }
+    return mapping.get(s, s)
+
+
+def normalize_experience_years(val: Any) -> float:
+    """Canonicalize work experience into deterministic float years."""
+    if isinstance(val, (int, float)):
+        return max(0.0, float(val))
+    val_str = str(val).strip().lower()
+    if any(k in val_str for k in ("none", "no", "fresh", "zero", "कोई नहीं")):
+        return 0.0
+    if any(k in val_str for k in ("6 month", "half", "0.5", "6 माह", "6 মাস")):
+        return 0.5
+    match = re.search(r"(\d+(?:\.\d+)?)", val_str)
+    if match:
+        return float(match.group(1))
+    return 0.0
+
+
+def normalize_vocational_training(val: Any) -> Tuple[bool, str]:
+    """Canonicalize vocational training type preserving full combinations."""
+    if not val:
+        return False, "none"
+    s = str(val).strip().lower().replace("-", "_").replace(" ", "_").replace("/", "_")
+    if s in ("none", "no", "false", "कोई नहीं"):
+        return False, "none"
+
+    mapping = {
+        "iti": "iti",
+        "cts": "cts_ntc",
+        "ntc": "ntc",
+        "cts_ntc": "cts_ntc",
+        "2_year_ntc": "2_year_ntc",
+        "1_year_cts": "1_year_cts",
+        "cits": "cits",
+        "ats": "ats",
+        "nac": "nac",
+        "dst": "dst",
+        "flexi_mou": "flexi_mou",
+        "ntc_cits": "ntc_cits",
+        "ntc_nac_cits": "ntc_nac_cits",
+        "ntc_nac": "ntc_nac",
+        "short_term": "short_term",
+        "equivalent": "equivalent",
+    }
+    canonical = mapping.get(s, s)
+    return True, canonical
+
+
+def normalize_notional_hours(val: Any) -> str:
+    """Canonicalize notional hours into the 8 official catalog buckets."""
+    if not val:
+        return "1–200"
+    s = str(val).strip().replace("-", "–")
+    valid_buckets = {
+        "1–200": "1–200",
+        "201–400": "201–400",
+        "401–600": "401–600",
+        "601–800": "601–800",
+        "801–1000": "801–1000",
+        "1001–1200": "1001–1200",
+        "1201–2400": "1201–2400",
+        "above 2401": "Above 2401",
+        "above_2401": "Above 2401",
+        ">2401": "Above 2401",
+    }
+    return valid_buckets.get(s.lower(), s)
+
+
+def normalize_pwd(val: Any) -> Tuple[bool, List[str]]:
+    """Canonicalize PwD status and catalog-compatible categories (VI, SHI, LD, ID)."""
+    if val in (None, False, "none", "pwd_none", "no", "false", "False"):
+        return False, []
+
+    if isinstance(val, list):
+        cats = [str(x).replace("pwd_", "").upper() for x in val if str(x) not in ("none", "pwd_none")]
+        return len(cats) > 0, [c for c in cats if c in ("VI", "SHI", "LD", "ID")] or cats
+
+    cat_clean = str(val).replace("pwd_", "").upper()
+    valid_cats = ["VI", "SHI", "LD", "ID"]
+    if cat_clean in valid_cats:
+        return True, [cat_clean]
+    return True, [str(val).strip()]
+
+
 def calculate_completeness(profile: StructuredBeneficiaryProfile) -> int:
-    """Calculates weighted completeness percentage of the structured profile."""
+    """Calculates weighted completeness percentage of the structured profile based on actual collected data."""
     score = 0
+    # Location (State & District)
     if profile.state_id and profile.district_id:
-        score += 15
-    if profile.name:
         score += 10
+    # Citizen name
+    if profile.name and profile.name.lower() not in ("citizen", "anonymous", ""):
+        score += 10
+    # Education
     if profile.education:
-        score += 15
+        score += 10
+    # Vocational training
+    if profile.vocational_training_type is not None:
+        score += 10
+    # Work experience
+    if profile.work_experience_label is not None or profile.work_experience_years > 0.0:
+        score += 10
+    # Sector interest
     if profile.interested_sector_id:
-        score += 20
-    if profile.work_experience_years is not None:
         score += 10
-    if profile.target_qualifications or profile.skills:
-        score += 15
+    # Catalog qualification choice
+    if profile.target_qualifications:
+        score += 10
+    # Competency evidence
+    if profile.tools_familiarity or profile.competency_evidence.technical_skills:
+        score += 10
+    # Notional hours capacity
     if profile.notional_hours_range:
-        score += 5
-    if profile.mobility_preference and profile.primary_goal:
         score += 10
+    # PwD status checked
+    if profile.pwd_checked:
+        score += 5
+    # Work preferences (mobility and goal)
+    if profile.mobility_preference and profile.primary_goal:
+        score += 5
+
     return min(100, score)
 
 
@@ -205,7 +363,7 @@ def determine_current_stage(profile: StructuredBeneficiaryProfile, status: str) 
     if not profile.name or profile.name.lower() in ("citizen", "anonymous", ""):
         return InterviewStage.BASIC_PROFILE, 1
 
-    if not profile.education or profile.education == "no_formal" and not profile.education_label:
+    if not profile.education or (profile.education in ("none", "no_formal") and not profile.education_label):
         return InterviewStage.EDUCATION, 2
 
     # Check vocational training
@@ -369,8 +527,20 @@ def generate_adaptive_question(
     elif stage == InterviewStage.CATALOG_CONTEXT:
         # CATALOG-AWARE: Query real qualifications from the chosen sector!
         sector_id = profile.interested_sector_id or "agriculture"
-        catalog_res = query_courses(client=client, sector_id=sector_id, page=1, page_size=6)
-        
+        is_pwd = profile.pwd_status and len(profile.pwd_categories) > 0
+
+        # Ground question in real qualifications from nsqf_qualifications
+        catalog_res = query_courses(
+            client=client,
+            sector_id=sector_id,
+            is_pwd=True if is_pwd else None,
+            page=1,
+            page_size=6,
+        )
+        if not catalog_res.items and is_pwd:
+            # Fallback to general sector courses if no courses marked specifically with PwD suitability flag
+            catalog_res = query_courses(client=client, sector_id=sector_id, page=1, page_size=6)
+
         options = []
         for q in catalog_res.items:
             label = f"{q.title} (Level {q.nsqf_level})"
@@ -614,24 +784,26 @@ def submit_answer_to_interview(
             extracted["district_id"] = profile.district_id
 
     elif q_id == "edu_highest_level":
-        profile.education = str(val).strip()
+        canonical_edu = normalize_education(val)
+        profile.education = canonical_edu
         profile.education_label = answer.raw_answer
+        if canonical_edu == "previous_nsqf":
+            profile.previous_nsqf_qualification = answer.raw_answer
         extracted["education"] = profile.education
         extracted["education_label"] = profile.education_label
+        extracted["previous_nsqf_qualification"] = profile.previous_nsqf_qualification
         # Map to legacy responses key for backward compatibility with recommendation engine
         responses["education"] = answer.raw_answer
 
     elif q_id == "voc_training_type":
-        profile.vocational_training_type = str(val).strip()
-        profile.vocational_training = val != "none"
+        is_trained, canonical_voc = normalize_vocational_training(val)
+        profile.vocational_training = is_trained
+        profile.vocational_training_type = canonical_voc
         extracted["vocational_training_type"] = profile.vocational_training_type
         extracted["vocational_training"] = profile.vocational_training
 
     elif q_id == "exp_years":
-        try:
-            profile.work_experience_years = float(val)
-        except Exception:
-            profile.work_experience_years = 0.0
+        profile.work_experience_years = normalize_experience_years(val)
         profile.work_experience_label = answer.raw_answer
         extracted["work_experience_years"] = profile.work_experience_years
         extracted["work_experience_label"] = profile.work_experience_label
@@ -657,23 +829,49 @@ def submit_answer_to_interview(
         tools_list = val if isinstance(val, list) else [str(val)]
         profile.tools_familiarity = tools_list
         profile.competency_evidence.technical_skills = tools_list
+
+        # NSQF Dimension 1: Professional Knowledge
+        pk_list = []
+        if profile.vocational_training and profile.vocational_training_type:
+            pk_list.append(f"Vocational training in {profile.vocational_training_type.upper()}")
+        if profile.education_label:
+            pk_list.append(f"Educational baseline: {profile.education_label}")
+        profile.competency_evidence.professional_knowledge = pk_list
+
+        # NSQF Dimension 2: Process Capability
+        pc_list = []
+        if profile.work_experience_years > 0:
+            pc_list.append(f"{profile.work_experience_years} years practical field practice")
+        pc_list.extend([f"Operational capability in {t}" for t in tools_list[:2]])
+        profile.competency_evidence.process_capability = pc_list
+
+        # NSQF Dimension 3: Core Skills
+        core_list = [f"Language literacy in {lang.upper()}"]
+        if profile.education in ("10th", "12th", "diploma", "graduate", "ug", "post_graduate", "phd"):
+            core_list.append("Foundational numeracy and communication")
+        profile.competency_evidence.core_skills = core_list
+
+        # NSQF Dimension 4: Responsibility Level
+        if profile.work_experience_years >= 3.0:
+            profile.competency_evidence.responsibility_level = "Independent execution and autonomous job delivery"
+        elif profile.work_experience_years >= 1.0:
+            profile.competency_evidence.responsibility_level = "Routine job execution with general supervision"
+        else:
+            profile.competency_evidence.responsibility_level = "Direct supervision and guided learning"
+
         extracted["tools_familiarity"] = tools_list
         extracted["competency_evidence"] = profile.competency_evidence.model_dump()
 
     elif q_id == "cap_notional_hours":
-        profile.notional_hours_range = str(val).strip()
+        profile.notional_hours_range = normalize_notional_hours(val)
         extracted["notional_hours_range"] = profile.notional_hours_range
 
     elif q_id == "pwd_status_category":
         profile.pwd_checked = True
         extracted["pwd_checked"] = True
-        is_pwd = val not in ("none", "pwd_none", False, "false", "no")
+        is_pwd, cats = normalize_pwd(val)
         profile.pwd_status = is_pwd
-        if is_pwd:
-            cat_clean = str(val).replace("pwd_", "").upper()
-            profile.pwd_categories = [cat_clean] if cat_clean in ("VI", "SHI", "LD", "ID") else [str(val).strip()]
-        else:
-            profile.pwd_categories = []
+        profile.pwd_categories = cats
         extracted["pwd_status"] = profile.pwd_status
         extracted["pwd_categories"] = profile.pwd_categories
 

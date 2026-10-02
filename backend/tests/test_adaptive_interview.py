@@ -220,7 +220,7 @@ def test_adaptive_stage_progression_and_answer_submission(adaptive_client):
     )
     assert ans1.status_code == 200
     state1 = ans1.json()
-    assert state1["profile_summary"]["education"] == "10th_pass"
+    assert state1["profile_summary"]["education"] == "10th"
     assert state1["current_stage"] == InterviewStage.VOCATIONAL_TRAINING.value
 
     # 3. Answer Vocational Training
@@ -443,3 +443,71 @@ def test_complete_adaptive_interview_locks_and_syncs(adaptive_client):
     assert "education" in session_row["responses"]
     assert "mobility" in session_row["responses"]
     assert "preference" in session_row["responses"]
+
+
+def test_education_vocational_experience_and_hours_compliance(adaptive_client):
+    """Verifies complete Phase 3B compliance across education, vocational, experience, and hours."""
+    from app.services.adaptive_interview_service import (
+        normalize_education,
+        normalize_experience_years,
+        normalize_notional_hours,
+        normalize_pwd,
+        normalize_vocational_training,
+    )
+
+    # 1. Education Canonicalization
+    assert normalize_education("5th") == "5th"
+    assert normalize_education("6th") == "6th"
+    assert normalize_education("7th") == "7th"
+    assert normalize_education("8th") == "8th"
+    assert normalize_education("9th") == "9th"
+    assert normalize_education("10th") == "10th"
+    assert normalize_education("11th") == "11th"
+    assert normalize_education("12th") == "12th"
+    assert normalize_education("1st_year_diploma") == "1st_year_diploma"
+    assert normalize_education("ug_diploma") == "ug_diploma"
+    assert normalize_education("diploma") == "diploma"
+    assert normalize_education("ug") == "ug"
+    assert normalize_education("graduate") == "graduate"
+    assert normalize_education("post_graduate") == "post_graduate"
+    assert normalize_education("phd") == "phd"
+    assert normalize_education("previous_nsqf") == "previous_nsqf"
+    assert normalize_education("iti_instructor_cits") == "iti_instructor_cits"
+    assert normalize_education("literate_read_write") == "literate_read_write"
+    assert normalize_education("no_formal") == "no_formal"
+    assert normalize_education("none") == "none"
+
+    # 2. Experience Canonicalization (exact half-year, float, 1-12, 13+)
+    assert normalize_experience_years(0) == 0.0
+    assert normalize_experience_years("6 months") == 0.5
+    assert normalize_experience_years(1.5) == 1.5
+    assert normalize_experience_years("7 years") == 7.0
+    assert normalize_experience_years("12.0") == 12.0
+    assert normalize_experience_years("13+ years") == 13.0
+
+    # 3. Vocational Training Canonicalization
+    assert normalize_vocational_training("none") == (False, "none")
+    assert normalize_vocational_training("iti") == (True, "iti")
+    assert normalize_vocational_training("cts_ntc") == (True, "cts_ntc")
+    assert normalize_vocational_training("2_year_ntc") == (True, "2_year_ntc")
+    assert normalize_vocational_training("1_year_cts") == (True, "1_year_cts")
+    assert normalize_vocational_training("cits") == (True, "cits")
+    assert normalize_vocational_training("ats") == (True, "ats")
+    assert normalize_vocational_training("nac") == (True, "nac")
+    assert normalize_vocational_training("dst") == (True, "dst")
+    assert normalize_vocational_training("flexi_mou") == (True, "flexi_mou")
+    assert normalize_vocational_training("ntc_cits") == (True, "ntc_cits")
+    assert normalize_vocational_training("ntc_nac_cits") == (True, "ntc_nac_cits")
+    assert normalize_vocational_training("equivalent") == (True, "equivalent")
+
+    # 4. Notional Hours 8 Canonical Buckets
+    for bucket in ["1–200", "201–400", "401–600", "601–800", "801–1000", "1001–1200", "1201–2400", "Above 2401"]:
+        assert normalize_notional_hours(bucket) == bucket
+
+    # 5. PwD Categories (VI, SHI, LD, ID)
+    assert normalize_pwd("pwd_vi") == (True, ["VI"])
+    assert normalize_pwd("pwd_shi") == (True, ["SHI"])
+    assert normalize_pwd("pwd_ld") == (True, ["LD"])
+    assert normalize_pwd("pwd_id") == (True, ["ID"])
+    assert normalize_pwd("none") == (False, [])
+
