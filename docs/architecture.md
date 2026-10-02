@@ -123,6 +123,17 @@ Phase 2C-2 connects the existing onboarding/profile flow to the Phase 2C-1 persi
 
 The Phase 2C-1 migration must be applied manually before these endpoints can persist against a live Supabase project. Phase 2C-3 interview persistence, recommendation APIs, authentication, and AI/voice integration remain deferred.
 
+#### Phase 2C-3 Persistent Interview Lifecycle
+
+Phase 2C-3 makes the existing four-question interview refresh-safe while preserving its established UI, keys, option values, and browser speech behavior:
+
+1. `POST /api/beneficiaries/{beneficiary_id}/interviews` authenticates the beneficiary capability and creates one draft session, or resumes the latest existing session. A completed session is returned as completed and is never silently reopened.
+2. `GET /api/interviews/{interview_id}` returns only the interview owned by the capability-resolved beneficiary. `PATCH /api/interviews/{interview_id}` replaces the validated structured responses for a draft and requires the caller's expected revision.
+3. `POST /api/interviews/{interview_id}/complete` validates all four established response dimensions (`workInterest`, `education`, `mobility`, and the existing UI key `preference` for primary goal), transitions the row to `completed`, sets `completed_at`, and increments the revision.
+4. Draft writes and completion use an optimistic revision check. Stale writes return `409 Conflict`; completed sessions reject edits and cannot revert to draft. The frontend treats React state as a cache and FastAPI/Supabase as the source of truth.
+5. The existing onboarding persists the beneficiary before entering the interview, then the frontend creates/resumes the interview, saves each answer, restores answers after refresh, and completes through FastAPI. Capability expiry/revocation returns the user to the existing onboarding recovery path.
+6. No new migration was required: the applied Phase 2C-1 migration already provides the required interview lifecycle columns and private service-role persistence boundary. `extracted_profile` remains `NULL`; no recommendations, AI/LLM extraction, or voice-provider changes are implemented.
+
 #### Security Boundary & Credential Isolation Rules
 1. **Server-Side Exclusivity**: `SUPABASE_SERVICE_ROLE_KEY` and backend secrets are loaded exclusively by the Python FastAPI server (`backend/app/core/config.py`).
 2. **Zero Frontend Secret Exposure**: Browser JavaScript and React frontend bundles NEVER receive the service-role key. No `VITE_` variable may ever be created for the service-role key.

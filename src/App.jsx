@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Navbar from './components/Navbar';
 import CulturalBackground from './components/CulturalBackground';
 import LandingPage from './pages/LandingPage';
@@ -43,6 +43,7 @@ export default function App() {
   const [beneficiarySession, setBeneficiarySession] = useState(loadBeneficiarySession);
   const [profilePersistenceError, setProfilePersistenceError] = useState('');
   const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const beneficiaryPersistenceRef = useRef(null);
 
   const clearInvalidBeneficiarySession = () => {
     clearBeneficiarySession();
@@ -127,6 +128,60 @@ export default function App() {
     }
   };
 
+  const handleEnsureBeneficiary = async ({ name, languageId, resolvedLocation }) => {
+    const payload = toCreatePayload({ name, languageId, resolvedLocation });
+    if (!payload) {
+      setProfilePersistenceError('Please provide your name and confirm your official location before continuing.');
+      return null;
+    }
+
+    if (beneficiaryPersistenceRef.current) return beneficiaryPersistenceRef.current;
+
+    const persistenceRequest = (async () => {
+      setProfilePersistenceError('');
+      setIsProfileSaving(true);
+      try {
+        if (beneficiarySession) {
+          const beneficiary = await updateBeneficiary(
+            beneficiarySession.beneficiaryId,
+            beneficiarySession.sessionToken,
+            payload,
+          );
+          setUserProfile(toUserProfile(beneficiary));
+          setResolvedLocation(toResolvedLocation(beneficiary));
+          return beneficiarySession;
+        }
+
+        const response = await createBeneficiary(payload);
+        const session = {
+          beneficiaryId: response.beneficiary.id,
+          sessionToken: response.session_token,
+        };
+        if (!saveBeneficiarySession(session)) {
+          setProfilePersistenceError('Your profile was created, but this browser could not retain the session safely.');
+          return null;
+        }
+        setBeneficiarySession(session);
+        setUserProfile(toUserProfile(response.beneficiary));
+        setResolvedLocation(toResolvedLocation(response.beneficiary));
+        return session;
+      } catch (error) {
+        if (error?.status === 401 || error?.status === 403) clearInvalidBeneficiarySession();
+        setProfilePersistenceError('We could not save your beneficiary profile. Please try again.');
+        return null;
+      } finally {
+        setIsProfileSaving(false);
+      }
+    })();
+
+    beneficiaryPersistenceRef.current = persistenceRequest;
+    try {
+      return await persistenceRequest;
+    } finally {
+      beneficiaryPersistenceRef.current = null;
+    }
+  };
+
   // Language selection callback
   const handleSelectLanguage = (lang) => {
     setCurrentLanguage(lang);
@@ -147,54 +202,9 @@ export default function App() {
     }
   };
 
-  // Callback when AI conversation completes
-  const handleCompleteConversation = async (answers) => {
-    const payload = toCreatePayload({
-      name: answers.name,
-      languageId: currentLanguage.id,
-      resolvedLocation: answers.location,
-    });
-
-    if (!payload) {
-      setProfilePersistenceError('Please provide your name and confirm your official location before continuing.');
-      return;
-    }
-
-    setProfilePersistenceError('');
-    setIsProfileSaving(true);
-    try {
-      const response = beneficiarySession
-        ? { beneficiary: await updateBeneficiary(
-          beneficiarySession.beneficiaryId,
-          beneficiarySession.sessionToken,
-          payload,
-        ) }
-        : await createBeneficiary(payload);
-
-      if (!beneficiarySession) {
-        const saved = saveBeneficiarySession({
-          beneficiaryId: response.beneficiary.id,
-          sessionToken: response.session_token,
-        });
-        if (!saved) {
-          setProfilePersistenceError('Your profile was created, but this browser could not retain the session safely.');
-          return;
-        }
-        setBeneficiarySession({
-          beneficiaryId: response.beneficiary.id,
-          sessionToken: response.session_token,
-        });
-      }
-
-      setUserProfile(toUserProfile(response.beneficiary));
-      setResolvedLocation(toResolvedLocation(response.beneficiary));
-      setCurrentPage('opportunities');
-    } catch (error) {
-      if (error?.status === 401 || error?.status === 403) clearInvalidBeneficiarySession();
-      setProfilePersistenceError('We could not save your beneficiary profile. Please try again.');
-    } finally {
-      setIsProfileSaving(false);
-    }
+  // Callback when the persisted interview reaches its completed state.
+  const handleCompleteConversation = () => {
+    setCurrentPage('opportunities');
   };
 
   // Select opportunity for details view
@@ -252,6 +262,11 @@ export default function App() {
             initialPrompt={initialPromptText}
             onCompleteConversation={handleCompleteConversation}
             onLocationResolved={setResolvedLocation}
+            beneficiarySession={beneficiarySession}
+            userProfile={userProfile}
+            initialResolvedLocation={resolvedLocation}
+            onEnsureBeneficiary={handleEnsureBeneficiary}
+            onInvalidSession={clearInvalidBeneficiarySession}
             onNavigate={handleNavigate}
             persistenceError={profilePersistenceError}
             isPersisting={isProfileSaving}

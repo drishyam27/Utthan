@@ -6,9 +6,9 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 2C-2 Complete — Anonymous Beneficiary/Profile API Complete
-- **Current Development Phase**: Phase 2C-2 (Beneficiary/Profile API)
-- **Next Development Phase**: Phase 2C-3 (Interview Persistence)
+- **Status**: Phase 2C-3 Complete — Persistent Interview Lifecycle Complete
+- **Current Development Phase**: Phase 2C-3 (Interview Persistence)
+- **Next Development Phase**: Phase 2C-4 (Deterministic Recommendation Service)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
 - **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
@@ -102,8 +102,15 @@
 - [x] Added backend API/security tests and frontend capability-storage coverage.
 - [x] Kept interview persistence, recommendation APIs, authentication, and AI/voice integration deferred.
 
-### ⏳ Phase 2C-3: Interview Persistence (NOT STARTED)
-- [ ] Implement draft, resume, answer-save, completion, revision, and idempotency APIs.
+### ✅ Phase 2C-3: Interview Persistence (COMPLETED)
+- [x] Added capability-protected create/resume, GET, draft PATCH, and completion endpoints for `interview_sessions`.
+- [x] Reused the Phase 2C-1 lifecycle fields with draft/completed state, `completed_at`, `updated_at`, nullable `extracted_profile`, and revision increments.
+- [x] Validated the existing `ConversationPage` response keys and exact English/Hindi/Bengali option values; arbitrary answer strings and extra fields are rejected.
+- [x] Added optimistic concurrency through required expected revisions and safe `409 Conflict` responses for stale writes.
+- [x] Made repeated interview initialization deterministic: the latest beneficiary session is resumed and completed sessions are never reopened or duplicated.
+- [x] Connected onboarding persistence before the first interview answer, draft answer saves, refresh hydration, and final completion without changing the existing questionnaire UI or voice behavior.
+- [x] Added interview lifecycle, revision, completion-finality, and IDOR/security coverage while retaining all earlier regression tests.
+- [x] Deferred recommendations, AI/LLM extraction, voice-provider changes, authentication, and all Phase 2C-4+ work.
 
 ### ⏳ Phase 2C-4: Deterministic Recommendation Service (NOT STARTED)
 - [ ] Move the verified matching logic behind a single backend recommendation service.

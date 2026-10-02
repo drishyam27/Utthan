@@ -1,9 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, MicOff, Volume2, VolumeX, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, RefreshCw, Globe, MapPin, UserRound, Check } from 'lucide-react';
 import { speakWithSarvamAI, stopAIVoice, createSpeechRecognizer } from '../services/aiService';
 import { LANGUAGES } from '../data/languages';
 import { detectLanguageFromVoice } from '../data/uiTranslations';
-import { resolveLocation } from '../services/api';
+import {
+  completeInterview,
+  createOrResumeInterview,
+  resolveLocation,
+  updateInterview,
+} from '../services/api';
+import {
+  getInterviewResumeStep,
+  hydrateInterviewAnswers,
+  toInterviewResponses,
+} from '../services/interviewPersistence';
 
 const INTERVIEW_STEPS = [
   {
@@ -113,6 +123,11 @@ export default function ConversationPage({
   onSelectLanguage,
   onCompleteConversation,
   onLocationResolved,
+  beneficiarySession,
+  userProfile,
+  initialResolvedLocation,
+  onEnsureBeneficiary,
+  onInvalidSession,
   persistenceError,
   isPersisting = false,
 }) {
@@ -127,11 +142,16 @@ export default function ConversationPage({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [interviewSession, setInterviewSession] = useState(null);
+  const [isInterviewLoading, setIsInterviewLoading] = useState(false);
+  const [isInterviewSaving, setIsInterviewSaving] = useState(false);
+  const [interviewError, setInterviewError] = useState('');
   // Track last spoken step to prevent re-speaking on re-renders or language updates
   const lastSpokenStepRef = useRef(-1);
   const hasSpokenGreetingRef = useRef(false);
   const activeRecognizer = useRef(null);
   const locationAttemptedRef = useRef(false);
+  const interviewLoadKeyRef = useRef('');
 
   const langCode = currentLanguage?.id || 'en';
   const isLanguageStep = currentStepIndex === 0;
@@ -145,6 +165,65 @@ export default function ConversationPage({
     || currentInterviewStep?.question?.hi
     || currentInterviewStep?.question?.en
     || '';
+
+  const applyInterviewSession = useCallback((session) => {
+    const restoredAnswers = hydrateInterviewAnswers(session, {
+      name: userProfile?.fullName,
+      location: initialResolvedLocation,
+    });
+    const resumeStep = getInterviewResumeStep(session, INTERVIEW_STEPS.length);
+
+    setInterviewSession(session);
+    setAnswers(restoredAnswers);
+    setNameInput(userProfile?.fullName || '');
+    setResolvedLocation(initialResolvedLocation || null);
+    setCurrentStepIndex(resumeStep);
+  }, [initialResolvedLocation, userProfile?.fullName]);
+
+  const loadOrResumeInterview = useCallback(async (session = beneficiarySession, language = langCode) => {
+    if (!session) return null;
+    const loadKey = session.beneficiaryId;
+    if (interviewLoadKeyRef.current === loadKey && interviewSession) return interviewSession;
+
+    interviewLoadKeyRef.current = loadKey;
+    setIsInterviewLoading(true);
+    setInterviewError('');
+    try {
+      const loaded = await createOrResumeInterview(
+        session.beneficiaryId,
+        session.sessionToken,
+        language,
+      );
+      applyInterviewSession(loaded);
+      return loaded;
+    } catch (error) {
+      interviewLoadKeyRef.current = '';
+      if (error?.status === 401 || error?.status === 403) {
+        if (onInvalidSession) onInvalidSession();
+      } else {
+        setInterviewError('Your interview could not be restored right now. Please try again.');
+      }
+      return null;
+    } finally {
+      setIsInterviewLoading(false);
+    }
+  }, [applyInterviewSession, beneficiarySession, interviewSession, langCode, onInvalidSession]);
+
+  useEffect(() => {
+    if (beneficiarySession) loadOrResumeInterview(beneficiarySession, langCode);
+  }, [beneficiarySession, langCode, loadOrResumeInterview]);
+
+  useEffect(() => {
+    if (!beneficiarySession) return;
+    if (userProfile?.fullName) {
+      setNameInput(userProfile.fullName);
+      setAnswers(previous => ({ ...previous, name: userProfile.fullName }));
+    }
+    if (initialResolvedLocation) {
+      setResolvedLocation(initialResolvedLocation);
+      setAnswers(previous => ({ ...previous, location: initialResolvedLocation }));
+    }
+  }, [beneficiarySession, userProfile?.fullName, initialResolvedLocation]);
 
   // Speak when step changes to a new step
   useEffect(() => {
@@ -276,12 +355,30 @@ export default function ConversationPage({
     );
   };
 
-  const continueFromLocation = () => {
-    if (resolvedLocation) setCurrentStepIndex(3);
+  const continueFromLocation = async () => {
+    if (!resolvedLocation || isPersisting || isInterviewLoading) return;
+
+    if (!beneficiarySession && onEnsureBeneficiary) {
+      const session = await onEnsureBeneficiary({
+        name: nameInput,
+        languageId: currentLanguage.id,
+        resolvedLocation,
+      });
+      if (!session) return;
+      const loaded = await loadOrResumeInterview(session, langCode);
+      if (!loaded) return;
+    } else if (!interviewSession) {
+      const loaded = await loadOrResumeInterview(beneficiarySession, langCode);
+      if (!loaded) return;
+    }
+
+    setAnswers(previous => ({ ...previous, name: nameInput.trim(), location: resolvedLocation }));
+    setCurrentStepIndex(3);
   };
 
   // Handle answering interview steps
-  const handleSelectAnswer = (selectedText) => {
+  const handleSelectAnswer = async (selectedText) => {
+    if (!currentInterviewStep || isInterviewSaving || isInterviewLoading) return;
     stopAIVoice();
     if (activeRecognizer.current) {
       try { activeRecognizer.current.stop(); } catch (e) {}
@@ -290,25 +387,84 @@ export default function ConversationPage({
     setLiveTranscript('');
 
     const newAnswers = { ...answers, [currentInterviewStep.category]: selectedText };
-    setAnswers(newAnswers);
+    const interviewResponses = toInterviewResponses(newAnswers);
 
-    if (currentStepIndex < INTERVIEW_STEPS.length + 2) {
-      // Advance to next step directly; useEffect will cleanly speak the new question
-      setCurrentStepIndex(prev => prev + 1);
-    } else {
-      // Complete!
-      setCurrentStepIndex(INTERVIEW_STEPS.length + 3);
-      const completionVoice = langCode === 'bn'
-        ? "অভিনন্দন! আপনার তথ্যের ভিত্তিতে আমরা আপনার জেলার ৫টি সেরা সরকারি সুযোগ খুঁজে পেয়েছি।"
-        : langCode === 'hi'
-          ? "बधाई हो! आपकी जानकारी के आधार पर हमने आपके जिले में सबसे उपयुक्त 5 सरकारी योजनाएं तैयार कर ली हैं।"
-          : "Congratulations! Based on your answers, we have matched 5 certified government schemes in your district.";
+    if (!interviewSession || !beneficiarySession) {
+      setInterviewError('Your interview is not ready to save yet. Please try again.');
+      return;
+    }
 
-      if (soundEnabled) {
-        setIsSpeaking(true);
-        speakWithSarvamAI({ text: completionVoice, languageId: langCode, speaker: 'priya' })
-          .finally(() => setIsSpeaking(false));
+    setIsInterviewSaving(true);
+    setInterviewError('');
+    try {
+      const saved = await updateInterview(
+        interviewSession.id,
+        beneficiarySession.sessionToken,
+        interviewResponses,
+        interviewSession.revision,
+      );
+      setInterviewSession(saved);
+      setAnswers(previous => ({ ...previous, ...saved.responses }));
+
+      if (currentStepIndex < INTERVIEW_STEPS.length + 2) {
+        // Advance to next step directly; useEffect will cleanly speak the new question
+        setCurrentStepIndex(prev => prev + 1);
+      } else {
+        // Complete after the final answer is saved as a draft.
+        setCurrentStepIndex(INTERVIEW_STEPS.length + 3);
+        const completionVoice = langCode === 'bn'
+          ? "অভিনন্দন! আপনার তথ্যের ভিত্তিতে আমরা আপনার জেলার ৫টি সেরা সরকারি সুযোগ খুঁজে পেয়েছি।"
+          : langCode === 'hi'
+            ? "बधाई हो! आपकी जानकारी के आधार पर हमने आपके जिले में सबसे उपयुक्त 5 सरकारी योजनाएं तैयार कर ली हैं।"
+            : "Congratulations! Based on your answers, we have matched 5 certified government schemes in your district.";
+
+        if (soundEnabled) {
+          setIsSpeaking(true);
+          speakWithSarvamAI({ text: completionVoice, languageId: langCode, speaker: 'priya' })
+            .finally(() => setIsSpeaking(false));
+        }
       }
+    } catch (error) {
+      if (error?.status === 401 || error?.status === 403) {
+        if (onInvalidSession) onInvalidSession();
+      } else if (error?.status === 409) {
+        setInterviewError('This interview changed in another tab. Please refresh to continue safely.');
+      } else {
+        setInterviewError('Your answer could not be saved. Please try again.');
+      }
+    } finally {
+      setIsInterviewSaving(false);
+    }
+  };
+
+  const handleCompleteInterview = async () => {
+    if (!interviewSession || !beneficiarySession || isInterviewSaving) return;
+    if (interviewSession.status === 'completed') {
+      onCompleteConversation(answers);
+      return;
+    }
+
+    setIsInterviewSaving(true);
+    setInterviewError('');
+    try {
+      const completed = await completeInterview(
+        interviewSession.id,
+        beneficiarySession.sessionToken,
+        interviewSession.revision,
+      );
+      setInterviewSession(completed);
+      setAnswers(previous => ({ ...previous, ...completed.responses }));
+      onCompleteConversation({ ...answers, ...completed.responses });
+    } catch (error) {
+      if (error?.status === 401 || error?.status === 403) {
+        if (onInvalidSession) onInvalidSession();
+      } else if (error?.status === 409) {
+        setInterviewError('This interview changed in another tab. Please refresh to continue safely.');
+      } else {
+        setInterviewError('Your interview could not be completed. Please try again.');
+      }
+    } finally {
+      setIsInterviewSaving(false);
     }
   };
 
@@ -624,10 +780,10 @@ export default function ConversationPage({
             </button>
             <button
               onClick={continueFromLocation}
-              disabled={!resolvedLocation}
+              disabled={!resolvedLocation || isPersisting || isInterviewLoading}
               className="flex items-center gap-1 hover:text-[#134e40] disabled:opacity-40 font-bold"
             >
-              <span>Continue</span>
+              <span>{isPersisting || isInterviewLoading ? 'Saving...' : 'Continue'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -730,6 +886,7 @@ export default function ConversationPage({
                 <button
                   key={idx}
                   onClick={() => handleSelectAnswer(opt)}
+                  disabled={isInterviewSaving || isInterviewLoading}
                   className="p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#134e40] text-[#134e40] hover:text-white border border-[#b8ded6] hover:border-[#134e40] text-xs sm:text-sm font-semibold text-left transition-all shadow-sm hover:shadow-md active:scale-98 flex items-center justify-between group"
                 >
                   <span>{opt}</span>
@@ -815,11 +972,11 @@ export default function ConversationPage({
           {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => onCompleteConversation(answers)}
-              disabled={isPersisting}
+              onClick={handleCompleteInterview}
+              disabled={isPersisting || isInterviewSaving || !interviewSession}
               className="px-6 py-3.5 rounded-full bg-[#134e40] hover:bg-[#0d3b30] disabled:opacity-60 text-white font-bold text-sm sm:text-base shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              <span>{isPersisting ? 'Saving your profile...' : 'View Matched Opportunities (5)'}</span>
+              <span>{isPersisting || isInterviewSaving ? 'Saving your interview...' : 'View Matched Opportunities (5)'}</span>
               <ArrowRight className="w-5 h-5" />
             </button>
 
@@ -841,9 +998,9 @@ export default function ConversationPage({
             </button>
           </div>
 
-          {persistenceError && (
+          {(persistenceError || interviewError) && (
             <p className="mt-4 text-xs font-semibold text-[#7a3b0e]" role="alert">
-              {persistenceError}
+              {persistenceError || interviewError}
             </p>
           )}
         </div>

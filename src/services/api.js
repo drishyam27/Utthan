@@ -81,3 +81,33 @@ export function updateBeneficiary(beneficiaryId, sessionToken, profile) {
     body: JSON.stringify(profile),
   });
 }
+
+export function createOrResumeInterview(beneficiaryId, sessionToken, language = 'hi') {
+  return request(`/api/beneficiaries/${encodeURIComponent(beneficiaryId)}/interviews`, {
+    method: 'POST',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify({ language }),
+  });
+}
+
+export function fetchInterview(interviewId, sessionToken) {
+  return request(`/api/interviews/${encodeURIComponent(interviewId)}`, {
+    headers: capabilityHeaders(sessionToken),
+  });
+}
+
+export function updateInterview(interviewId, sessionToken, responses, expectedRevision) {
+  return request(`/api/interviews/${encodeURIComponent(interviewId)}`, {
+    method: 'PATCH',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify({ responses, expected_revision: expectedRevision }),
+  });
+}
+
+export function completeInterview(interviewId, sessionToken, expectedRevision) {
+  return request(`/api/interviews/${encodeURIComponent(interviewId)}/complete`, {
+    method: 'POST',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify({ expected_revision: expectedRevision }),
+  });
+}
