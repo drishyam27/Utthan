@@ -248,3 +248,5 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 <p align="center">
   <b>🇮🇳 Utthan — Empowering Every Citizen's Livelihood Journey Through Voice and Technology.</b>
 </p>
+
+---
