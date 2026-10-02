@@ -134,3 +134,47 @@ export function transcribeAudio(audioBlob, languageHint, sessionToken) {
     body: formData,
   });
 }
+
+export function startAdaptiveSession(beneficiaryId, sessionToken, language = 'hi') {
+  return request('/api/adaptive-interview/sessions', {
+    method: 'POST',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify({ beneficiary_id: beneficiaryId, language }),
+  });
+}
+
+export function fetchAdaptiveState(interviewId, sessionToken) {
+  return request(`/api/adaptive-interview/${encodeURIComponent(interviewId)}/state`, {
+    headers: capabilityHeaders(sessionToken),
+  });
+}
+
+export function submitAdaptiveAnswer(interviewId, sessionToken, answerPayload) {
+  return request(`/api/adaptive-interview/${encodeURIComponent(interviewId)}/answer`, {
+    method: 'POST',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify(answerPayload),
+  });
+}
+
+export function fetchStructuredProfile(interviewId, sessionToken) {
+  return request(`/api/adaptive-interview/${encodeURIComponent(interviewId)}/profile`, {
+    headers: capabilityHeaders(sessionToken),
+  });
+}
+
+export function correctStructuredProfileField(interviewId, sessionToken, fieldName, value) {
+  return request(`/api/adaptive-interview/${encodeURIComponent(interviewId)}/profile`, {
+    method: 'PATCH',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify({ field_name: fieldName, value }),
+  });
+}
+
+export function completeAdaptiveInterview(interviewId, sessionToken) {
+  return request(`/api/adaptive-interview/${encodeURIComponent(interviewId)}/complete`, {
+    method: 'POST',
+    headers: capabilityHeaders(sessionToken),
+  });
+}
+

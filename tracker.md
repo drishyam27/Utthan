@@ -6,9 +6,9 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 3A Complete — Authoritative NSQF / NQR Course Catalog Foundation
-- **Current Development Phase**: Phase 3A (Authoritative NSQF / NQR Course Catalog Foundation)
-- **Next Development Phase**: Phase 3B (Adaptive Voice Interview & Structured Profile Extraction)
+- **Status**: Phase 3B Complete — Adaptive Beneficiary Interview & Structured Beneficiary Profile
+- **Current Development Phase**: Phase 3B (Adaptive Beneficiary Interview & Structured Beneficiary Profile)
+- **Next Development Phase**: Phase 3C (Conversational Profile Extraction & Clarification Layer)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
 - **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL, Sarvam AI STT
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
@@ -22,16 +22,18 @@
 | **Visual UI & Design System** | **COMPLETED** | Polished, responsive cultural theme, light-calibrated mode | Preserve without visual redesign |
 | **Multilingual UI (23 Langs)** | **COMPLETED** | UI translations dictionary and native scripts active | Maintain and keep synced |
 | **Voice Playback (TTS)** | **PARTIALLY COMPLETED** | Sarvam AI Bulbul:v3 active for 11 languages; browser fallback for 12 | Expand coverage in voice service |
-| **Voice Input (STT)** | **COMPLETED** | Backend-integrated Sarvam AI STT (`saaras:v4`) at `POST /api/voice/transcribe` with zero disk persistence and browser Web Speech fallback | Feed transcripts into Groq LLM layer in Phase 3 |
+| **Voice Input (STT)** | **COMPLETED** | Backend-integrated Sarvam AI STT (`saaras:v4`) at `POST /api/voice/transcribe` with zero disk persistence and browser Web Speech fallback | Feed transcripts into Groq LLM layer in Phase 3C |
 | **State & District Dataset** | **COMPLETED** | Authoritative 36 States/UTs & 784 districts from LGD master in `canonicalLocations.json` & `locations.js`; automatic resolution validates against the same Supabase master | Use canonical IDs in later profile/recommendation work |
-| **NSQF / NQR Course Catalog**| **COMPLETED** | Authoritative catalog of 2,810 qualifications across 44 sectors from `NSQF-NQR Course Dataset/`; decimal levels (1.0–7.0), PwD courses (231), idempotent seed SQL, `/api/nsqf/` routes, 94 tests passing | Feed courses into adaptive interview & recommendation matching |
+| **NSQF / NQR Course Catalog**| **COMPLETED** | Authoritative catalog of 2,810 qualifications across 44 sectors from live Supabase `nsqf_qualifications`; decimal levels (1.0–7.0), PwD courses (231), `/api/nsqf/` routes | Authoritative foundation for interview grounding & recommendations |
+| **Adaptive Interview Engine**| **COMPLETED** | Deterministic 13-stage state machine grounded in live NSQF catalog; captures 5-dimension NSQF competency evidence, vocational training, PwD categories, notional hours, with profile review & inline correction | Add Groq conversational extraction in Phase 3C |
+| **Structured Profile Schema** | **COMPLETED** | `StructuredBeneficiaryProfile` persisted in `interview_sessions.extracted_profile` with 100% backward-compatible responses sync | Consumed by deterministic recommendation engine |
 | **Verified Opportunities Data**| **COMPLETED** | 7 verified government schemes with NSQF & portal source links | Served via `/api/opportunities` |
 | **Skills Catalog (NSQF)** | **COMPLETED** | 11 standardized skills with official SSC QP codes & levels | Embedded in opportunity details |
-| **Recommendation Engine** | **COMPLETED** | Server-side deterministic recommendation service active at `GET /api/beneficiaries/{id}/recommendations` and consumed by frontend `OpportunitiesPage` | Connect to Groq explanation in Phase 3 |
-| **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` (including `20261003000001_nsqf_nqr_catalog.sql`) & seeds (`supabase/seed_nsqf_catalog.sql`) | Verified locally and in tests |
-| **Groq AI Integration** | **PARTIALLY COMPLETED** | Inference function declared in `aiService.js` (uncalled in UI) | Connect to profile extraction in Phase 3 |
-| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend with health, location, automatic location-resolution, opportunity, anonymous beneficiary, interview, voice, and nsqf routes | Connect interview layer in Phase 3 |
+| **Recommendation Engine** | **COMPLETED** | Server-side deterministic recommendation service active at `GET /api/beneficiaries/{id}/recommendations` and consumed by frontend `OpportunitiesPage` | Connect to live NSQF catalog in Phase 3D |
+| **Database Schema & Seed** | **COMPLETED** | Full PostgreSQL DDL in `supabase/migrations/` (including `20261003000001_nsqf_nqr_catalog.sql`) & seeds | Verified live on remote Supabase |
+| **Backend API (FastAPI)** | **COMPLETED** | FastAPI modular backend with health, locations, opportunities, beneficiaries, interviews, adaptive-interview, recommendations, voice, and nsqf routes | Connect Groq conversational layer in Phase 3C |
 | **BHASHINI Integration** | **BLOCKED** | Approval & API credentials pending | Retain Sarvam AI fallback until unblocked |
+
 
 ---
 
@@ -144,16 +146,40 @@
 - [x] Added automated backend test suite (`backend/tests/test_voice.py`) passing 9 focused checks (77/77 backend tests passing).
 - [x] Added automated frontend test suite (`tests/voiceIntegration.test.js`) validating option matching and recording support (7/7 test suites passing).
 
-### ⏳ Phase 3: Adaptive Voice Interview & Profile Extraction (NOT STARTED)
-- [ ] Onboarding flow capturing Beneficiary Name, State, and District.
-- [ ] Conversational interview connected to Groq LLM for semantic profile extraction.
-- [ ] Voice prompt synchronizer with Sarvam TTS.
-- [ ] Dynamic opportunity matching triggered upon interview completion.
+### ✅ Phase 3A: Authoritative NSQF/NQR Course Catalog Foundation (COMPLETED)
+- [x] Ingested authoritative national NSQF/NQR qualifications catalog from `NSQF-NQR Courses Dataset`.
+- [x] Applied migrations `20261003000001_nsqf_nqr_catalog.sql` and `20261003000002_nsqf_column_types.sql` to remote Supabase.
+- [x] Populated and verified live remote Supabase catalog: **44 sectors** (`nsqf_sectors`) and **2,810 qualifications** (`nsqf_qualifications`), zero duplicate `(q_code, title)` pairs, zero excluded sectors, 233 PwD qualifications.
+- [x] Created catalog query service (`backend/app/services/nsqf_service.py`) and FastAPI endpoints (`/api/nsqf/sectors`, `/api/nsqf/courses`, `/api/nsqf/stats`).
+
+### ✅ Phase 3B: Adaptive Beneficiary Interview + Structured Beneficiary Profile (COMPLETED)
+- [x] Defined comprehensive Pydantic schemas in `backend/app/schemas/adaptive_interview.py` for 13 interview stages, dual-mode inputs (voice/option/manual), grounded catalog context, and 5-dimension NSQF Competency Evidence.
+- [x] Implemented multilingual question bank and option dictionary in `backend/app/services/interview_localization.py` covering all 10 education levels, vocational training categories (ITI, CTS, CITS, ATS), experience durations, notional hours buckets, and PwD categories (LD, VI, SHI, ID).
+- [x] Built deterministic catalog-aware adaptive interview engine in `backend/app/services/adaptive_interview_service.py` that queries live `nsqf_qualifications` for qualifications and equipment/tools in the selected sector.
+- [x] Preserved backward compatibility by storing structured profile in `interview_sessions.extracted_profile` while synchronizing legacy responses (`workInterest`, `education`, `mobility`, `preference`) and primary beneficiary table columns.
+- [x] Added FastAPI endpoints under `/api/adaptive-interview/`:
+  - `POST /api/adaptive-interview/sessions`: Start or resume an adaptive interview session.
+  - `GET /api/adaptive-interview/{interview_id}/state`: Current stage, active question, and profile summary.
+  - `POST /api/adaptive-interview/{interview_id}/answer`: Submit answer (voice transcript or option value) and get next question.
+  - `GET /api/adaptive-interview/{interview_id}/profile`: Retrieve full `StructuredBeneficiaryProfile`.
+  - `PATCH /api/adaptive-interview/{interview_id}/profile`: Correct/update a specific field during review.
+  - `POST /api/adaptive-interview/{interview_id}/complete`: Final review confirmation & lock session.
+- [x] Created `src/components/AdaptiveInterviewView.jsx` rendering stage indicators, progress bars, catalog grounding badges, Sarvam STT mic buttons, dynamic single/multi choice options, and a structured profile review screen with inline editing.
+- [x] Integrated adaptive interview flow into `src/pages/ConversationPage.jsx` with automatic question playback via Sarvam TTS, voice answering via Sarvam STT, and seamless transition to recommendations.
+- [x] Added automated backend test suite (`backend/tests/test_adaptive_interview.py`) passing all 5 test cases; total backend test suite now 99/99 passing.
+
+### ⏳ Phase 3C: Conversational Profile Extraction & Clarification Layer (NOT STARTED)
+- [ ] Connect Groq conversational AI strictly for natural language dialogue, transcription extraction, and clarification (zero authoritative eligibility decisions).
+- [ ] Grounded prompt templates using `StructuredBeneficiaryProfile` schema.
+
+### ⏳ Phase 3D: Deterministic Catalog Eligibility & Course Ranking (NOT STARTED)
+- [ ] Connect `StructuredBeneficiaryProfile` directly to live `nsqf_qualifications` catalog for ranking and recommendation matching.
 
 ### ⏳ Phase 4: Citizen Engagement, Persistence & PWA (NOT STARTED)
 - [ ] Local storage and database persistence for citizen skill profiles.
 - [ ] Downloadable application receipt (PDF / Image) with QR code.
 - [ ] PWA offline asset caching for low-connectivity rural environments.
+
 
 ---
 
