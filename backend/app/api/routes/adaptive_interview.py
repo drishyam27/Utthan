@@ -18,6 +18,7 @@ from app.schemas.adaptive_interview import (
     ProfileFieldCorrectionRequest,
     StructuredBeneficiaryProfile,
 )
+from app.schemas.nsqf_recommendation import NSQFRecommendationResponse
 from app.schemas.groq_extraction import (
     InterpretTranscriptRequest,
     InterpretTranscriptResponse,
@@ -334,3 +335,32 @@ def complete_interview(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to complete interview: {str(exc)}",
         )
+
+
+@router.get(
+    "/{interview_id}/recommendations",
+    response_model=NSQFRecommendationResponse,
+    summary="Get authoritative NSQF/NQR course recommendations for this interview",
+    responses={
+        404: {"model": ErrorResponse, "description": "Interview not found"},
+    },
+)
+def get_interview_recommendations(
+    interview_id: UUID = Path(...),
+    limit: int = 15,
+    capability: Optional[CapabilityContext] = Depends(_get_optional_capability),
+    client: Client = Depends(get_supabase_client),
+):
+    """
+    Computes deterministic, explainable recommendations directly from the authoritative
+    2,810-course NSQF/NQR catalog using the interview session's structured profile.
+    """
+    interview_row, beneficiary_id = _resolve_interview_and_beneficiary(interview_id, client, capability)
+    from app.services.nsqf_recommendation_service import generate_nsqf_recommendations_for_beneficiary
+    return generate_nsqf_recommendations_for_beneficiary(
+        client=client,
+        beneficiary_id=beneficiary_id,
+        interview_id=interview_id,
+        limit=limit,
+    )
+

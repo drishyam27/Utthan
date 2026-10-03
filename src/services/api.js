@@ -120,6 +120,14 @@ export function fetchRecommendations(beneficiaryId, sessionToken) {
   });
 }
 
+export function fetchNSQFRecommendations(beneficiaryId, sessionToken, interviewId = null) {
+  const query = interviewId ? `?interview_id=${encodeURIComponent(interviewId)}` : '';
+  return request(`/api/beneficiaries/${encodeURIComponent(beneficiaryId)}/recommendations/nsqf${query}`, {
+    headers: capabilityHeaders(sessionToken),
+  });
+}
+
+
 export function transcribeAudio(audioBlob, languageHint, sessionToken) {
   const formData = new FormData();
   const filename = audioBlob.type?.includes('wav') ? 'audio.wav' : 'audio.webm';

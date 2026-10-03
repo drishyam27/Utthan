@@ -57,5 +57,46 @@ export function mapOpportunity(opportunity = {}, overrides = {}) {
     unmetCriteria: overrides.unmetCriteria ?? (Array.isArray(opportunity.unmet_criteria) ? opportunity.unmet_criteria : (Array.isArray(opportunity.unmetCriteria) ? opportunity.unmetCriteria : [])),
     reasons: reasonsList,
     eligible: overrides.eligible ?? (typeof opportunity.eligible === 'boolean' ? opportunity.eligible : true),
+    itemType: 'opportunity',
   };
 }
+
+export function mapNSQFQualification(rec = {}) {
+  const eligibility = rec.eligibility || {};
+  const matched = eligibility.matched_requirements || [];
+  const hardFailures = eligibility.hard_failures || [];
+  const reasonsList = rec.match_reasons || [];
+
+  return {
+    id: rec.q_code || `nsqf-${Math.random()}`,
+    q_code: rec.q_code,
+    title: rec.title,
+    category: rec.sector_name || 'General',
+    sector_id: rec.sector_id,
+    sector_name: rec.sector_name,
+    partner: rec.awarding_body || 'National Skill Development Agency',
+    nsqf_level: rec.nsqf_level,
+    qualification_type: rec.qualification_type || 'NSQF National Qualification',
+    notional_hours_range: rec.notional_hours_range,
+    min_notional_hours: rec.min_notional_hours,
+    max_notional_hours: rec.max_notional_hours,
+    duration: rec.notional_hours_range ? `${rec.notional_hours_range} Hours` : null,
+    is_pwd: Boolean(rec.is_pwd),
+    pwd_categories: Array.isArray(rec.pwd_categories) ? rec.pwd_categories : [],
+    proposed_occupation: rec.proposed_occupation,
+    progression_pathway: rec.progression_pathway,
+    overview: rec.description || rec.proposed_occupation || null,
+    location: 'National NSQF/NQR Standard (All Certified Centers)',
+    matchScore: typeof rec.score === 'number' ? rec.score : null,
+    rank: rec.rank || 1,
+    whyMatches: reasonsList.length > 0 ? reasonsList[0] : null,
+    reasons: reasonsList,
+    matchedCriteria: matched,
+    unmetCriteria: hardFailures,
+    warnings: rec.warnings || [],
+    eligible: eligibility.eligible ?? true,
+    source: 'nsqf_nqr_catalog',
+    itemType: 'qualification',
+  };
+}
+

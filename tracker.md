@@ -6,12 +6,13 @@
 
 ## 📊 Summary Status
 
-- **Status**: Phase 3B Complete — Adaptive Beneficiary Interview & Structured Beneficiary Profile
-- **Current Development Phase**: Phase 3B (Adaptive Beneficiary Interview & Structured Beneficiary Profile)
-- **Next Development Phase**: Phase 3C (Conversational Profile Extraction & Clarification Layer)
+- **Status**: Phase 3D Complete — Recommendation Engine 2.0 (Authoritative NSQF/NQR Catalog Recommendations)
+- **Current Development Phase**: Phase 3D (Authoritative NSQF/NQR Catalog + Deterministic Eligibility + Explainable Ranking)
+- **Next Development Phase**: Phase 4 (Citizen Engagement, Persistence & PWA)
 - **Supported Languages**: 23 (English + All 22 Official Eighth Schedule Indian Languages)
-- **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL, Sarvam AI STT
+- **Primary Tech Stack**: React 19, Vite 8, Tailwind CSS 3.4, FastAPI, Pydantic, Supabase / PostgreSQL, Sarvam AI STT, Groq conversational layer
 - **Target Form Factors**: Responsive Web (Optimized for Mobile Portrait & Desktop Landscape)
+
 
 ---
 
@@ -168,12 +169,20 @@
 - [x] Integrated adaptive interview flow into `src/pages/ConversationPage.jsx` with automatic question playback via Sarvam TTS, voice answering via Sarvam STT, and seamless transition to recommendations.
 - [x] Added automated backend test suite (`backend/tests/test_adaptive_interview.py`) passing all 5 test cases; total backend test suite now 99/99 passing.
 
-### ⏳ Phase 3C: Conversational Profile Extraction & Clarification Layer (NOT STARTED)
-- [ ] Connect Groq conversational AI strictly for natural language dialogue, transcription extraction, and clarification (zero authoritative eligibility decisions).
-- [ ] Grounded prompt templates using `StructuredBeneficiaryProfile` schema.
+### ✅ Phase 3C: Conversational Profile Extraction & Clarification Layer (COMPLETED)
+- [x] Connected Groq conversational AI strictly for natural language dialogue, transcription extraction, and clarification (zero authoritative eligibility decisions).
+- [x] Grounded prompt templates using `StructuredBeneficiaryProfile` schema with deterministic validation and fallback.
+- [x] Added `POST /api/adaptive-interview/{interview_id}/interpret` route and comprehensive backend test suite (`backend/tests/test_groq_extraction.py`).
 
-### ⏳ Phase 3D: Deterministic Catalog Eligibility & Course Ranking (NOT STARTED)
-- [ ] Connect `StructuredBeneficiaryProfile` directly to live `nsqf_qualifications` catalog for ranking and recommendation matching.
+### ✅ Phase 3D: Recommendation Engine 2.0 (Authoritative NSQF/NQR Catalog) (COMPLETED)
+- [x] Made authoritative NSQF/NQR catalog (`nsqf_qualifications`) with 2,810 courses across 44 sectors the primary source for course recommendations.
+- [x] Enforced 15 excluded sectors server-side with zero tolerance (0 excluded courses can ever appear).
+- [x] Implemented deterministic eligibility evaluation (`evaluate_nsqf_eligibility`) supporting canonical 20-level education hierarchy, vocational training, PwD compatibility (VI, SHI, LD, ID), and notional hours capacity.
+- [x] Implemented explainable weighted relevance scoring and stable deterministic ranking (`score` DESC, `nsqf_level` DESC, `q_code` ASC).
+- [x] Added capability-protected endpoint `GET /api/beneficiaries/{beneficiary_id}/recommendations/nsqf` and `GET /api/adaptive-interview/{interview_id}/recommendations`.
+- [x] Integrated `OpportunitiesPage.jsx` and `OpportunityDetailsPage.jsx` with clear visual distinction between Official NSQF Qualifications and Local Training Batches.
+- [x] Added comprehensive automated backend test suite (`backend/tests/test_nsqf_recommendation.py`) passing 19 focused tests (130/130 total backend tests passing).
+
 
 ### ⏳ Phase 4: Citizen Engagement, Persistence & PWA (NOT STARTED)
 - [ ] Local storage and database persistence for citizen skill profiles.

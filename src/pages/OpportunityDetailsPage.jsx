@@ -22,6 +22,13 @@ export default function OpportunityDetailsPage({
     if (!initialOpportunity?.id) return undefined;
 
     setLoadedOpportunity(initialOpportunity);
+
+    if (initialOpportunity.itemType === 'qualification') {
+      // Authoritative NSQF qualification already carries full metadata
+      setLoading(false);
+      return undefined;
+    }
+
     setLoading(true);
     setError('');
     fetchOpportunity(initialOpportunity.id)
@@ -41,6 +48,7 @@ export default function OpportunityDetailsPage({
       cancelled = true;
     };
   }, [initialOpportunity]);
+
 
   const opportunity = loadedOpportunity;
   if (!opportunity) return null;
@@ -81,24 +89,38 @@ export default function OpportunityDetailsPage({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[#b8ded6]/60">
           <div>
             <span className="text-xs text-[#718078] uppercase tracking-wider block mb-1">
-              {getUIText('details', 'durationFormat', langId)}
+              {opportunity.itemType === 'qualification' ? 'NSQF Level' : getUIText('details', 'durationFormat', langId)}
             </span>
-            <span className="text-sm font-bold text-[#134e40]">{opportunity.duration || 'Not specified'}</span>
+            <span className="text-sm font-bold text-[#134e40]">
+              {opportunity.itemType === 'qualification' ? `Level ${opportunity.nsqf_level}` : (opportunity.duration || 'Not specified')}
+            </span>
           </div>
           <div>
             <span className="text-xs text-[#718078] uppercase tracking-wider block mb-1">
-              {getUIText('details', 'stipendSupport', langId)}
+              {opportunity.itemType === 'qualification' ? 'Course Duration' : getUIText('details', 'stipendSupport', langId)}
             </span>
-            <span className="text-sm font-bold text-emerald-700">{opportunity.stipend || 'Not specified'}</span>
+            <span className="text-sm font-bold text-emerald-700">
+              {opportunity.itemType === 'qualification' ? (opportunity.duration || 'Flexible') : (opportunity.stipend || 'Not specified')}
+            </span>
           </div>
           <div>
             <span className="text-xs text-[#718078] uppercase tracking-wider block mb-1">
-              {getUIText('details', 'expectedIncome', langId)}
+              {opportunity.itemType === 'qualification' ? 'NQR Qualification Code' : getUIText('details', 'expectedIncome', langId)}
             </span>
-            <span className="text-sm font-bold text-[#134e40]">{opportunity.avgEarnings || 'Not specified'}</span>
+            <span className="text-sm font-bold text-[#134e40] font-mono">
+              {opportunity.itemType === 'qualification' ? opportunity.q_code : (opportunity.avgEarnings || 'Not specified')}
+            </span>
           </div>
         </div>
+
+        {opportunity.progression_pathway && (
+          <div className="mt-4 p-3.5 rounded-xl bg-[#FAF7F0] border border-[#cbd5e1] text-xs">
+            <span className="font-bold text-[#134e40] block mb-1">Career Progression Pathway:</span>
+            <span className="text-[#37474F]">{opportunity.progression_pathway}</span>
+          </div>
+        )}
       </div>
+
 
       {/* Skill Gap Analysis Section (Core requirement) */}
       <div className="bg-white/95 rounded-3xl p-6 sm:p-8 border border-[#b8ded6] shadow-sm mb-8">
