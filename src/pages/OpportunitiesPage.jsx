@@ -2,9 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { 
   Sparkles, MapPin, ArrowRight, Filter, AlertCircle, 
   CheckCircle2, Compass, ChevronDown, ChevronUp, XCircle,
-  GraduationCap, Clock, Award, ShieldCheck, Building2
+  GraduationCap, Clock, Award, ShieldCheck, Building2,
+  Volume2, VolumeX, Loader2
 } from 'lucide-react';
-import { fetchOpportunities, fetchRecommendations, fetchNSQFRecommendations, ApiError } from '../services/api';
+import { 
+  fetchOpportunities, 
+  fetchRecommendations, 
+  fetchNSQFRecommendations, 
+  explainInterviewRecommendations,
+  ApiError 
+} from '../services/api';
+import { speakWithSarvamAI, stopAIVoice } from '../services/aiService';
 import { mapOpportunity, mapNSQFQualification } from '../services/opportunityAdapter';
 import { getUIText } from '../data/uiTranslations';
 
@@ -27,12 +35,39 @@ export default function OpportunitiesPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retryToken, setRetryToken] = useState(0);
+  const [recommendationExplanation, setRecommendationExplanation] = useState('');
+  const [isSpeakingExplanation, setIsSpeakingExplanation] = useState(false);
+  const [isExplanationLoading, setIsExplanationLoading] = useState(false);
   const langId = currentLanguage?.id || 'en';
+
+  useEffect(() => {
+    return () => {
+      stopAIVoice();
+    };
+  }, []);
+
+  const toggleSpeakExplanation = () => {
+    if (isSpeakingExplanation) {
+      stopAIVoice();
+      setIsSpeakingExplanation(false);
+      return;
+    }
+    if (!recommendationExplanation) return;
+    setIsSpeakingExplanation(true);
+    speakWithSarvamAI({
+      text: recommendationExplanation,
+      languageId: langId,
+      speaker: 'priya',
+    }).finally(() => {
+      setIsSpeakingExplanation(false);
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError('');
+    setRecommendationExplanation('');
 
     const hasSession = Boolean(beneficiarySession?.beneficiaryId && beneficiarySession?.sessionToken);
 
@@ -121,6 +156,31 @@ export default function OpportunitiesPage({
             setNsqfStatus('ready');
             const mappedNsqf = nsqfPayload.recommendations.map(rec => mapNSQFQualification(rec));
             setNsqfRecommendations(mappedNsqf);
+
+            // Fetch natural-language explanation grounded in deterministic recommendations
+            if (hasSession) {
+              setIsExplanationLoading(true);
+              explainInterviewRecommendations(
+                beneficiarySession.interviewId || beneficiarySession.beneficiaryId,
+                beneficiarySession.sessionToken,
+                langId,
+                nsqfPayload.recommendations.slice(0, 3).map(r => ({
+                  q_code: r.q_code,
+                  title: r.title,
+                  sector: r.sector,
+                  nsqf_level: r.nsqf_level,
+                  notional_hours: r.notional_hours,
+                  match_reasons: r.reasons || [],
+                }))
+              ).then((expRes) => {
+                if (!cancelled && expRes?.overall_explanation) {
+                  setRecommendationExplanation(expRes.overall_explanation);
+                }
+              }).catch(() => {})
+              .finally(() => {
+                if (!cancelled) setIsExplanationLoading(false);
+              });
+            }
           } else {
             setNsqfStatus('empty');
             setNsqfRecommendations([]);
@@ -286,6 +346,53 @@ export default function OpportunitiesPage({
           <button onClick={() => setRetryToken((token) => token + 1)} className="font-bold text-[#134e40] hover:underline whitespace-nowrap">
             Retry loading
           </button>
+        </div>
+      )}
+
+      {/* 3b. Conversational Natural-Language Explanation & TTS Playback */}
+      {!loading && !error && activeTab === 'nsqf' && nsqfStatus === 'ready' && (recommendationExplanation || isExplanationLoading) && (
+        <div className="mb-6 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-emerald-50/90 to-[#FAF7F0] border border-emerald-200 shadow-sm animate-in fade-in">
+          <div className="flex items-start justify-between gap-4 mb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#e69943] shrink-0" />
+              <span className="text-xs font-bold text-[#134e40] uppercase tracking-wider">
+                Personalized Recommendation Summary
+              </span>
+            </div>
+            {recommendationExplanation && (
+              <button
+                onClick={toggleSpeakExplanation}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
+                  isSpeakingExplanation
+                    ? 'bg-amber-600 text-white animate-pulse'
+                    : 'bg-[#134e40] hover:bg-[#0d3b30] text-white'
+                }`}
+                title={isSpeakingExplanation ? "Stop voice explanation" : "Listen to explanation"}
+              >
+                {isSpeakingExplanation ? (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5" />
+                    <span>Stop Voice</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span>Listen to Explanation</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          {isExplanationLoading ? (
+            <div className="flex items-center gap-2 text-xs text-[#718078] py-2">
+              <Loader2 className="w-4 h-4 animate-spin text-[#134e40]" />
+              <span>Generating personalized explanation from qualification match criteria...</span>
+            </div>
+          ) : (
+            <p className="text-xs sm:text-sm text-[#263238] leading-relaxed">
+              {recommendationExplanation}
+            </p>
+          )}
         </div>
       )}
 

@@ -199,4 +199,29 @@ export function interpretVoiceTranscript(interviewId, sessionToken, transcript, 
   });
 }
 
+export function synthesizeSpeech({ text, language = 'hi', speaker = 'meera', pace = 1.0 }) {
+  return request('/api/voice/synthesize', {
+    method: 'POST',
+    body: JSON.stringify({
+      text,
+      language,
+      speaker,
+      pace,
+    }),
+  });
+}
+
+export function explainInterviewRecommendations(interviewId, sessionToken, language = 'hi', topN = 3) {
+  return request(`/api/adaptive-interview/${encodeURIComponent(interviewId)}/explain-recommendations`, {
+    method: 'POST',
+    headers: capabilityHeaders(sessionToken),
+    body: JSON.stringify({
+      interview_id: interviewId,
+      language,
+      top_n: topN,
+    }),
+  });
+}
+
+
 

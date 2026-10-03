@@ -39,6 +39,7 @@ export default function AdaptiveInterviewView({
   isSpeaking,
   isSaving,
   errorMessage,
+  clarificationMessage,
   langCode = 'hi',
 }) {
   const [editingField, setEditingField] = useState(null);
@@ -435,6 +436,14 @@ export default function AdaptiveInterviewView({
       </h2>
 
       {q.help_text && <p className="text-xs text-[#718078] mb-6 max-w-lg">{q.help_text}</p>}
+
+      {/* Dynamic Conversational Clarification / Contradiction banner */}
+      {clarificationMessage && (
+        <div className="mb-6 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs sm:text-sm font-medium flex items-center gap-2 max-w-lg shadow-sm text-left animate-in fade-in">
+          <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>{clarificationMessage}</span>
+        </div>
+      )}
 
       {/* Center Voice Mic Button (Sarvam STT) */}
       <div className="mb-6 flex flex-col items-center">

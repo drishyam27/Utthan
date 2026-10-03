@@ -183,6 +183,14 @@
 - [x] Integrated `OpportunitiesPage.jsx` and `OpportunityDetailsPage.jsx` with clear visual distinction between Official NSQF Qualifications and Local Training Batches.
 - [x] Added comprehensive automated backend test suite (`backend/tests/test_nsqf_recommendation.py`) passing 19 focused tests (130/130 total backend tests passing).
 
+### ✅ Phase 3E: Full Conversational Voice Loop + TTS Refinement (COMPLETED)
+- [x] Implemented server-side Sarvam Bulbul:v3 Text-to-Speech proxy service (`backend/app/services/tts_service.py`) and FastAPI route (`POST /api/voice/synthesize`).
+- [x] Secured all voice API keys (`SARVAM_API_KEY`, `GROQ_API_KEY`) strictly on the backend, removing client-side key exposure from frontend.
+- [x] Supported 11 Indic languages natively in Bulbul:v3 with seamless fallback to browser Web Speech API for other Eighth Schedule languages.
+- [x] Connected Groq recommendation explanation service (`explain_nsqf_recommendations_with_groq`) and endpoint (`POST /api/adaptive-interview/{interview_id}/explain-recommendations`) grounded strictly in deterministic match reasons with offline multilingual fallback.
+- [x] Integrated conversational voice loop in `ConversationPage.jsx` with clarification & contradiction audio prompts, mutual exclusion against concurrent speech/recording, and smooth completion transition.
+- [x] Added natural-language recommendation explanation banner and audio playback button to `OpportunitiesPage.jsx`.
+- [x] Added automated integration test suite (`backend/tests/test_conversational_voice_loop.py`) passing 14 integration tests; total backend test suite now **144/144 passing**.
 
 ### ⏳ Phase 4: Citizen Engagement, Persistence & PWA (NOT STARTED)
 - [ ] Local storage and database persistence for citizen skill profiles.

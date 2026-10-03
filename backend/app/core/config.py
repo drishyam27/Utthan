@@ -62,6 +62,11 @@ class Settings:
     SARVAM_STT_TIMEOUT_SECONDS: float = float(
         os.getenv("SARVAM_STT_TIMEOUT_SECONDS", "15")
     )
+    SARVAM_TTS_URL: str = os.getenv(
+        "SARVAM_TTS_URL",
+        "https://api.sarvam.ai/text-to-speech"
+    ).strip()
+
 
     # Groq LLM Conversational Understanding Configuration
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "").strip()

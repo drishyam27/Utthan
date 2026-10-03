@@ -193,6 +193,7 @@ export default function ConversationPage({
   const [isInterviewSaving, setIsInterviewSaving] = useState(false);
   const [interviewError, setInterviewError] = useState('');
   const [adaptiveState, setAdaptiveState] = useState(null);
+  const [clarificationPrompt, setClarificationPrompt] = useState('');
   // Track last spoken step to prevent re-speaking on re-renders or language updates
   const lastSpokenStepRef = useRef(-1);
   const lastSpokenQuestionIdRef = useRef('');
@@ -457,6 +458,7 @@ export default function ConversationPage({
     }
     setIsListening(false);
     setLiveTranscript('');
+    setClarificationPrompt('');
     setIsInterviewSaving(true);
     setInterviewError('');
 
@@ -527,6 +529,38 @@ export default function ConversationPage({
           langCode,
           currentQ.question_id,
         );
+
+        // Check if clarification is needed (e.g. ambiguity or missing specifics)
+        if (res.clarification_needed && res.clarification_question) {
+          setInterviewError('');
+          setClarificationPrompt(res.clarification_question);
+          if (soundEnabled) {
+            setIsSpeaking(true);
+            speakWithSarvamAI({
+              text: res.clarification_question,
+              languageId: langCode,
+              speaker: 'priya',
+            }).finally(() => setIsSpeaking(false));
+          }
+          return;
+        }
+
+        // Check if contradiction was detected
+        if (res.contradiction_detected && res.contradiction_message) {
+          setInterviewError('');
+          setClarificationPrompt(res.contradiction_message);
+          if (soundEnabled) {
+            setIsSpeaking(true);
+            speakWithSarvamAI({
+              text: res.contradiction_message,
+              languageId: langCode,
+              speaker: 'priya',
+            }).finally(() => setIsSpeaking(false));
+          }
+          return;
+        }
+
+        setClarificationPrompt('');
         if (res.updated_state) {
           setAdaptiveState(res.updated_state);
           if (res.updated_state.profile_summary) {
@@ -1241,6 +1275,7 @@ export default function ConversationPage({
             isSpeaking={isSpeaking}
             isSaving={isInterviewSaving}
             errorMessage={interviewError}
+            clarificationMessage={clarificationPrompt}
             langCode={langCode}
           />
         ) : currentInterviewStep ? (

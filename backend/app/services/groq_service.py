@@ -31,10 +31,14 @@ from app.schemas.adaptive_interview import (
 from app.schemas.beneficiary import LanguageCode
 from app.schemas.groq_extraction import (
     ContradictionItem,
+    ExplainRecommendationsResponse,
     ExtractedProfileFields,
     InterpretationResult,
     InterpretTranscriptResponse,
+    RecommendationExplanationItem,
 )
+from app.schemas.nsqf_recommendation import NSQFRecommendationResponse
+
 from app.services.adaptive_interview_service import (
     _load_beneficiary_row,
     _load_interview_row,
@@ -670,3 +674,160 @@ async def interpret_and_apply_to_session(
         updated_state=updated_state,
         clarification_needed=False,
     )
+
+
+async def explain_nsqf_recommendations_with_groq(
+    beneficiary_id: UUID,
+    interview_id: Optional[UUID],
+    recommendations_response: NSQFRecommendationResponse,
+    profile: StructuredBeneficiaryProfile,
+    lang: LanguageCode = "hi",
+    top_n: int = 3,
+) -> ExplainRecommendationsResponse:
+    """
+    Generates a natural-language conversational explanation of deterministic NSQF recommendations.
+    Enforces strict architectural boundaries:
+    1. Zero course selection or modification (Groq only explains the real courses provided).
+    2. Zero hallucination of benefits or placement outcomes.
+    3. Grounded strictly in the deterministic match reasons.
+    4. Deterministic template fallback if Groq is unconfigured or fails.
+    """
+    recs = recommendations_response.recommendations[:top_n]
+    if not recs:
+        # No recommendations to explain
+        fallback_msg = {
+            "hi": "वर्तमान प्रोफ़ाइल के लिए कोई प्रत्यक्ष सरकारी पाठ्यक्रम उपलब्ध नहीं हो सका। कृपया अपनी रुचि या कौशल अपडेट करें।",
+            "bn": "আপনার বর্তমান তথ্যের সাথে মিল রেখে সরাসরি কোনো কোর্স পাওয়া যায়নি। অনুগ্রহ করে আপনার তথ্য আপডেট করুন।",
+            "en": "No matching government qualifications were found for your current profile parameters. Please update your preferences.",
+        }.get(lang, "No matching qualifications were found. Please update your profile.")
+        return ExplainRecommendationsResponse(
+            beneficiary_id=beneficiary_id,
+            interview_id=interview_id,
+            language=lang,
+            overall_explanation=fallback_msg,
+            items=[],
+        )
+
+    # Prepare structured input for Groq explanation
+    courses_payload = []
+    for r in recs:
+        courses_payload.append({
+            "rank": r.rank,
+            "q_code": r.q_code,
+            "title": r.title,
+            "sector": r.sector_name,
+            "nsqf_level": r.nsqf_level,
+            "duration": r.notional_hours_range,
+            "reasons": r.match_reasons[:3],
+        })
+
+    profile_summary = {
+        "sector": profile.interested_sector_name or profile.interested_sector_id,
+        "education": profile.education_label or profile.education,
+        "experience": f"{profile.work_experience_years} years",
+        "skills": profile.skills[:5],
+    }
+
+    groq_prompt = f"""You are the voice assistant for Utthan (उत्थान).
+Your task is to explain why specific official NSQF qualifications were deterministically matched to this citizen, speaking naturally in {lang}.
+
+CRITICAL BOUNDARIES:
+1. Explain ONLY the {len(recs)} courses listed below. DO NOT recommend any different courses.
+2. DO NOT change course codes, titles, or NSQF levels.
+3. Ground your explanation strictly on the provided match reasons.
+4. Keep the explanation warm, respectful, concise (1-2 sentences per course), and easy to understand over voice.
+
+CITIZEN PROFILE:
+{json.dumps(profile_summary, ensure_ascii=False)}
+
+RECOMMENDED COURSES:
+{json.dumps(courses_payload, ensure_ascii=False)}
+
+RESPOND ONLY WITH VALID JSON:
+{{
+  "overall_explanation": "1-2 sentence spoken summary in {lang}",
+  "items": [
+    {{
+      "q_code": "string",
+      "spoken_summary": "1-2 sentence spoken explanation in {lang}"
+    }}
+  ]
+}}"""
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful, respectful Indian public service voice assistant. Always respond with strict valid JSON.",
+        },
+        {"role": "user", "content": groq_prompt},
+    ]
+
+    try:
+        if settings.is_groq_configured:
+            api_res = await call_groq_chat_completion(messages)
+            content = api_res.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+            cleaned = _sanitize_llm_json(content)
+            parsed = json.loads(cleaned)
+            
+            explanation_items = []
+            parsed_items = {item.get("q_code"): item.get("spoken_summary") for item in parsed.get("items", [])}
+            
+            for r in recs:
+                summary = parsed_items.get(r.q_code)
+                if not summary:
+                    # Per-item fallback
+                    summary = f"{r.title} ({r.sector_name}) - NSQF Level {r.nsqf_level}."
+                explanation_items.append(RecommendationExplanationItem(
+                    q_code=r.q_code,
+                    title=r.title,
+                    sector_name=r.sector_name,
+                    nsqf_level=r.nsqf_level,
+                    rank=r.rank,
+                    spoken_summary=summary,
+                    key_match_reasons=r.match_reasons[:3],
+                ))
+
+            overall = parsed.get("overall_explanation") or f"Here are the top {len(recs)} courses matched to your profile."
+            return ExplainRecommendationsResponse(
+                beneficiary_id=beneficiary_id,
+                interview_id=interview_id,
+                language=lang,
+                overall_explanation=overall,
+                items=explanation_items,
+            )
+    except Exception as exc:
+        logger.warning(f"Groq recommendation explanation failed or skipped ({exc}); using deterministic template fallback.")
+
+    # Robust Deterministic Template Fallback (100% offline & error resilient)
+    first_course = recs[0]
+    fallback_overall = {
+        "hi": f"आपके साक्षात्कार और व्यावहारिक अनुभव के आधार पर हमने आपके लिए {len(recs)} सरकारी NSQF पाठ्यक्रम चुने हैं। आपका शीर्ष पाठ्यक्रम '{first_course.title}' है, जो {first_course.sector_name} क्षेत्र में NSQF स्तर {first_course.nsqf_level} का है।",
+        "bn": f"আপনার অভিজ্ঞতা ও দক্ষতার ভিত্তিতে আমরা আপনার জন্য {len(recs)}টি সরকারি NSQF কোর্স বেছে নিয়েছি। প্রধান কোর্স হলো '{first_course.title}', যা {first_course.sector_name} বিভাগে NSQF লেভেল {first_course.nsqf_level}।",
+        "en": f"Based on your verified skills and interview assessment, we matched {len(recs)} official NSQF qualifications. Your top match is '{first_course.title}' in {first_course.sector_name} at NSQF Level {first_course.nsqf_level}.",
+    }.get(lang, f"Matched {len(recs)} NSQF qualifications. Top match: '{first_course.title}' (Level {first_course.nsqf_level}).")
+
+    fallback_items = []
+    for r in recs:
+        item_summary = {
+            "hi": f"यह पाठ्यक्रम ({r.title}) आपके {r.sector_name} अनुभव और कार्य प्राथमिकताओं से मेल खाता है।",
+            "bn": f"এই কোর্সটি ({r.title}) আপনার {r.sector_name} দক্ষতা ও পছন্দের সাথে মানানসই।",
+            "en": f"This qualification ({r.title}) aligns directly with your {r.sector_name} background and practical competencies.",
+        }.get(lang, f"{r.title} aligns with your {r.sector_name} background.")
+        fallback_items.append(RecommendationExplanationItem(
+            q_code=r.q_code,
+            title=r.title,
+            sector_name=r.sector_name,
+            nsqf_level=r.nsqf_level,
+            rank=r.rank,
+            spoken_summary=item_summary,
+            key_match_reasons=r.match_reasons[:3],
+        ))
+
+    return ExplainRecommendationsResponse(
+        beneficiary_id=beneficiary_id,
+        interview_id=interview_id,
+        language=lang,
+        overall_explanation=fallback_overall,
+        items=fallback_items,
+    )
+

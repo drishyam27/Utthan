@@ -78,3 +78,31 @@ class InterpretTranscriptResponse(BaseModel):
     updated_state: Optional[AdaptiveInterviewState] = None
     clarification_needed: bool = False
     clarification_question: Optional[str] = None
+
+
+class ExplainRecommendationsRequest(BaseModel):
+    """Payload to request natural language explanation of deterministic NSQF recommendations."""
+    interview_id: Optional[UUID] = None
+    language: LanguageCode = Field(default="hi", description="Language for conversational explanation")
+    top_n: int = Field(default=3, ge=1, le=5, description="Number of top ranked recommendations to explain")
+
+
+class RecommendationExplanationItem(BaseModel):
+    """Conversational summary of why an authoritative course matched the citizen."""
+    q_code: str
+    title: str
+    sector_name: str
+    nsqf_level: float
+    rank: int
+    spoken_summary: str = Field(..., description="Factual conversational explanation in citizen's language")
+    key_match_reasons: List[str] = Field(default_factory=list)
+
+
+class ExplainRecommendationsResponse(BaseModel):
+    """Natural conversational explanation grounded strictly in deterministic match reasons."""
+    beneficiary_id: UUID
+    interview_id: Optional[UUID] = None
+    language: LanguageCode
+    overall_explanation: str = Field(..., description="Holistic spoken summary of all recommendations")
+    items: List[RecommendationExplanationItem] = Field(default_factory=list)
+

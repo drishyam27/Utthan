@@ -6,8 +6,9 @@ Provides endpoints for audio transcription via Sarvam AI STT.
 from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
-from app.schemas.voice import TranscriptionResponse
+from app.schemas.voice import SynthesisRequest, SynthesisResponse, TranscriptionResponse
 from app.services.stt_service import transcribe_audio
+from app.services.tts_service import synthesize_speech
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -47,3 +48,23 @@ async def transcribe_voice(
         content_type=file.content_type,
         language_hint=language,
     )
+
+
+@router.post(
+    "/synthesize",
+    response_model=SynthesisResponse,
+    summary="Synthesize speech audio from text",
+    description=(
+        "Converts question text or recommendations into natural Indian-accented speech "
+        "using Sarvam AI Bulbul Indic TTS. Keeps API keys server-side."
+    ),
+)
+async def synthesize_voice(
+    payload: SynthesisRequest,
+) -> SynthesisResponse:
+    """
+    Synthesizes speech from input text in the citizen's preferred language.
+    Returns base64 audio or fallback_needed flag without failing the conversation.
+    """
+    return await synthesize_speech(payload)
+

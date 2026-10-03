@@ -20,9 +20,12 @@ from app.schemas.adaptive_interview import (
 )
 from app.schemas.nsqf_recommendation import NSQFRecommendationResponse
 from app.schemas.groq_extraction import (
+    ExplainRecommendationsRequest,
+    ExplainRecommendationsResponse,
     InterpretTranscriptRequest,
     InterpretTranscriptResponse,
 )
+
 from app.schemas.beneficiary import LanguageCode
 from app.schemas.common import ErrorResponse
 from app.schemas.interview import InterviewCreateRequest
@@ -363,4 +366,51 @@ def get_interview_recommendations(
         interview_id=interview_id,
         limit=limit,
     )
+
+
+@router.post(
+    "/{interview_id}/explain-recommendations",
+    response_model=ExplainRecommendationsResponse,
+    summary="Get conversational spoken explanation of deterministic NSQF recommendations",
+    responses={
+        404: {"model": ErrorResponse, "description": "Interview not found"},
+    },
+)
+async def explain_interview_recommendations(
+    interview_id: UUID = Path(...),
+    payload: ExplainRecommendationsRequest = ExplainRecommendationsRequest(),
+    capability: Optional[CapabilityContext] = Depends(_get_optional_capability),
+    client: Client = Depends(get_supabase_client),
+):
+    """
+    Invokes Groq to generate a natural conversational spoken explanation of
+    deterministic NSQF recommendations. Groq receives the real recommendations
+    and explains their deterministic match reasons faithfully without fabricating courses.
+    """
+    interview_row, beneficiary_id = _resolve_interview_and_beneficiary(interview_id, client, capability)
+    from app.services.nsqf_recommendation_service import generate_nsqf_recommendations_for_beneficiary
+    from app.services.groq_service import explain_nsqf_recommendations_with_groq
+
+    b_res = client.table("beneficiaries").select("*").eq("id", str(beneficiary_id)).limit(1).execute()
+    b_rows = getattr(b_res, "data", [])
+    b_row = b_rows[0] if b_rows else {}
+    profile = get_or_initialize_profile(interview_row, b_row)
+
+    recs_response = generate_nsqf_recommendations_for_beneficiary(
+        client=client,
+        beneficiary_id=beneficiary_id,
+        interview_id=interview_id,
+        limit=payload.top_n,
+    )
+
+    lang = payload.language or profile.preferred_language or "hi"
+    return await explain_nsqf_recommendations_with_groq(
+        beneficiary_id=beneficiary_id,
+        interview_id=interview_id,
+        recommendations_response=recs_response,
+        profile=profile,
+        lang=lang,
+        top_n=payload.top_n,
+    )
+
 
