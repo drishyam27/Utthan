@@ -97,10 +97,20 @@ async def synthesize_speech(payload: SynthesisRequest) -> SynthesisResponse:
     chunk = clean_text[:MAX_TTS_TEXT_LENGTH]
     tts_url = getattr(settings, "SARVAM_TTS_URL", "https://api.sarvam.ai/text-to-speech")
 
+    valid_speakers = {
+        "aditya", "ritu", "ashutosh", "priya", "neha", "rahul", "pooja", "rohan",
+        "simran", "kavya", "amit", "dev", "ishita", "shreya", "ratan", "varun",
+        "manan", "sumit", "roopa", "kabir", "aayan", "shubh", "advait", "anand",
+        "tanya", "tarun", "sunny", "mani", "gokul", "vijay", "shruti", "suhani",
+        "mohit", "kavitha", "rehan", "soham", "rupali",
+    }
+    req_speaker = (payload.speaker or getattr(settings, "SARVAM_TTS_SPEAKER", "ritu")).strip().lower()
+    selected_speaker = req_speaker if req_speaker in valid_speakers else "ritu"
+
     request_body = {
         "inputs": [chunk],
         "target_language_code": target_lang,
-        "speaker": payload.speaker or "meera",
+        "speaker": selected_speaker,
         "pitch": 0,
         "pace": payload.pace or 1.0,
         "loudness": 1.5,

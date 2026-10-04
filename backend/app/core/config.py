@@ -66,11 +66,11 @@ class Settings:
         "SARVAM_TTS_URL",
         "https://api.sarvam.ai/text-to-speech"
     ).strip()
-
+    SARVAM_TTS_SPEAKER: str = os.getenv("SARVAM_TTS_SPEAKER", "ritu").strip()
 
     # Groq LLM Conversational Understanding Configuration
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "").strip()
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b").strip()
     GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1").strip()
     GROQ_TIMEOUT_SECONDS: float = float(
         os.getenv("GROQ_TIMEOUT_SECONDS", "12.0")

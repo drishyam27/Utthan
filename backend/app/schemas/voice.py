@@ -17,7 +17,7 @@ class SynthesisRequest(BaseModel):
     """Payload for text-to-speech synthesis request."""
     text: str = Field(..., description="Text content to synthesize into speech")
     language: str = Field(default="hi", description="Language code (e.g. 'hi', 'bn', 'en', 'hi-IN')")
-    speaker: Optional[str] = Field(default="meera", description="Voice profile (e.g. 'meera', 'priya', 'arvind')")
+    speaker: Optional[str] = Field(default="ritu", description="Voice profile (e.g. 'ritu', 'priya', 'aditya')")
     pace: Optional[float] = Field(default=1.0, ge=0.5, le=2.0, description="Speech rate multiplier")
 
 

@@ -426,8 +426,13 @@ def load_candidate_qualifications(
                 query = query.eq("sector_id", target_sector_id)
             res = query.limit(200).execute()
             rows = getattr(res, "data", [])
-            if rows:
-                return [r for r in rows if r.get("sector_name") not in EXCLUDED_SECTORS]
+            if rows is not None:
+                safe_rows = [r for r in rows if r.get("sector_name") not in EXCLUDED_SECTORS]
+                # If a specific sector was requested, return the results for that sector (even if empty)
+                if target_sector_id:
+                    return safe_rows
+                if safe_rows:
+                    return safe_rows
         except Exception as exc:
             logger.warning("Supabase qualification query failed (%s); falling back to authoritative local catalog", exc)
 
@@ -441,14 +446,13 @@ def load_candidate_qualifications(
         and c.get("sector_id") not in [slugify(ex) for ex in EXCLUDED_SECTORS]
     ]
 
-    if target_sector_id:
+    if target_sector_id or profile.interested_sector_name:
         sector_matched = [
             c for c in safe_courses
-            if c.get("sector_id") == target_sector_id
+            if (target_sector_id and c.get("sector_id") == target_sector_id)
             or (profile.interested_sector_name and c.get("sector_name", "").lower() == profile.interested_sector_name.lower())
         ]
-        if sector_matched:
-            return sector_matched
+        return sector_matched
 
     return safe_courses
 
