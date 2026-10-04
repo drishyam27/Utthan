@@ -244,49 +244,93 @@ Local tracker for citizen pathway progress.
 
 ---
 
-## 3. Planned Recommendation Architecture
+## 3. Deterministic Recommendation Architecture
 
 ### Core Design Principle: Deterministic Eligibility First
-> **Critical Rule:** The LLM does NOT decide whether a citizen is legally eligible for a government program. Eligibility is strictly deterministic based on statutory criteria (State/District, Education, Age, Category).
+> **Critical Rule:** The LLM does NOT decide whether a citizen is legally eligible for a government program. Eligibility is strictly deterministic based on statutory criteria (State/District, Education, Age, Mobility).
 
 ```
-Citizen Input (Location, Education, Mobility, Trade Interest)
+Beneficiary Profile + Completed Interview Responses
                             ↓
        ┌────────────────────────────────────────┐
        │   1. Deterministic Eligibility Filter  │
-       │   - State / District match             │
-       │   - Education threshold match          │
-       │   - Target demographic filter          │
+       │   - Geography (Pan-India vs LGD State) │
+       │   - Canonical location required        │
+       │   - Minimum Education threshold rank   │
+       │   - Age boundaries (if provided)       │
+       │   - Mobility requirement rank          │
        └───────────────────┬────────────────────┘
                            │ Eligible Schemes Pool
                            ▼
        ┌────────────────────────────────────────┐
        │   2. Rule-Based Scoring & Ranking      │
-       │   - Trade alignment weight (40%)       │
-       │   - Mobility tolerance weight (25%)    │
-       │   - Educational fit weight (20%)       │
-       │   - Goal priority weight (15%)         │
+       │   - Trade / craft alignment (40%)      │
+       │   - Mobility preference fit (25%)      │
+       │   - Educational pace fit (20%)         │
+       │   - Goal / milestone priority fit (15%)│
+       │   - Deterministic Tie-Breaker:         │
+       │     score DESC, nsqf DESC, opp_id ASC  │
        └───────────────────┬────────────────────┘
-                           │ Ranked Top-N Matches
+                           │ Ranked Top-N Matches + Explainable Ineligible Pool
                            ▼
        ┌────────────────────────────────────────┐
-       │   3. Contextual Reasoning (Groq AI)   │
-       │   - Explains in citizen's mother tongue│
-       │   - "Why this matches your situation"  │
-       │   - Summarizes practical next steps    │
-       └───────────────────┬────────────────────┘
-                           ▼
-                 Delivered to Frontend
+       │   3. Capability-Protected API Response │
+       │   - GET /api/beneficiaries/{id}/recs   │
+       │   - NSQF QP code & skills metadata     │
+       │   - Explicit matched & unmet criteria  │
+       └────────────────────────────────────────┘
 ```
+
+### Phase 2C-4 Implementation Details
+* **Protected Endpoint**: `GET /api/beneficiaries/{beneficiary_id}/recommendations`
+* **Authentication**: Capability Bearer Token (validated against `beneficiary_sessions.token_hash` with expiry and revocation check).
+* **Missing Interview Handling**: If no interview has been completed, returns HTTP 200 with `has_completed_interview: false`, `recommendations: []`, and an informative message without fabricating recommendations.
+* **Canonical Location Strictness**: Missing or unresolved State/District rejects restricted opportunities without guessing or inferring location.
+* **Scoring Weights (100% total)**:
+  - Trade Alignment: 40 points max (keyword match = 40, category cluster = 25, fallback = 15).
+  - Mobility Fit: 25 points max (exact commute match = 25, regional commute = 18).
+  - Education Fit: 20 points max (exact qualification pace = 20, exceeding base = 17).
+  - Goal Fit: 15 points max (direct milestone match = 15, complementary = 10).
+* **Tie-Breaker**: Secondary sort on `nsqf_level` DESC, tertiary sort on `opportunity_id` ASC.
+* **Separation of Concerns**: Returns `recommendations` (strictly eligible) and `ineligible_opportunities` (with `eligible: false` and explicit `unmet_criteria`).
+
+### Phase 2C-5 Implementation Details (Frontend Integration)
+* **API Client Consumption**: `src/services/api.js` defines `fetchRecommendations(beneficiaryId, sessionToken)` calling `GET /api/beneficiaries/{beneficiary_id}/recommendations` with the standard `Authorization: Bearer <token>` capability header.
+* **Architecture Preservation**: Backend remains the sole authoritative source of truth. Zero client-side re-scoring, re-ranking, or eligibility filtering is implemented in React.
+* **Opportunity Adapter Extension**: `src/services/opportunityAdapter.js` normalizes recommendation payload fields (`score` $\rightarrow$ `matchScore`, `matched_criteria` $\rightarrow$ `matchedCriteria`, `unmet_criteria` $\rightarrow$ `unmetCriteria`, `why_matches` $\rightarrow$ `reasons`).
+* **UX States Handled in `OpportunitiesPage`**:
+  1. *Loading*: Accessible skeleton shimmer feedback.
+  2. *Recommendations Available*: Badges highlighting profile match score (e.g., `85% Profile Match`), reasons why recommended (`Why this is recommended`), and matched criteria pills.
+  3. *Incomplete Interview*: Action card explaining that livelihood assessment is required, linking directly to `ConversationPage`.
+  4. *No Eligible Matches*: Contextual empty state with transparent disclosure of ineligible schemes and unmet statutory criteria.
+  5. *API Error / Network Failure*: Graceful error boundary state with safe retry button without exposing backend stack traces.
 
 ---
 
 ## 4. Voice & Multilingual Architecture
 
-### Speech-to-Text (STT)
-* **Current**: Native Browser Web Speech API (`window.webkitSpeechRecognition`).
-* **Limitation**: Requires Chromium browsers (Chrome/Edge desktop, Chrome Android).
-* **Future**: Server-side Bhashini Speech-to-Text once official approvals and API keys are provisioned.
+### Speech-to-Text (STT) (Phase 2C-6 Implemented)
+* **Primary Provider**: Sarvam AI `saaras:v4` Multilingual Speech-to-Text API (`POST https://api.sarvam.ai/speech-to-text`).
+* **Backend Endpoint**: `POST /api/voice/transcribe` (multipart/form-data with in-memory streaming).
+* **Security & Credential Isolation**:
+  - `SARVAM_API_KEY` is loaded exclusively by the backend (`Settings.SARVAM_API_KEY`).
+  - Browser JavaScript bundles never receive or store the Sarvam API key.
+  - Rate limiting (429), timeouts (504), and upstream errors (502) are sanitized so no keys or internal URLs leak to the client.
+* **Privacy & In-Memory Processing**:
+  - Voice recordings are streamed in-memory via `UploadFile.read()`.
+  - Zero disk caching or persistent storage of citizen voice recordings.
+  - Memory buffers are released immediately upon completion of the transcription request.
+* **Audio Capture & Codecs**:
+  - Browser client uses `MediaRecorder` API via `src/services/audioRecorder.js`.
+  - Supports `audio/webm`, `audio/wav`, `audio/ogg`, and `audio/mp4` containers up to 10 MB.
+  - Client state machine manages explicit states: `idle`, `recording`, `transcribing`, and `error`.
+* **Language Support (22 Official Languages + Indian English)**:
+  - Maps Utthan language IDs to official BCP-47 codes: `hi-IN`, `bn-IN`, `ta-IN`, `te-IN`, `mr-IN`, `gu-IN`, `kn-IN`, `ml-IN`, `pa-IN`, `od-IN`, `as-IN`, `mai-IN`, `sa-IN`, `ne-IN`, `kok-IN`, `sd-IN`, `ks-IN`, `doi-IN`, `mni-IN`, `brx-IN`, `sat-IN`, `en-IN`.
+  - Falls back to `unknown` for automatic language detection by the provider.
+* **Fallback Strategy**:
+  - If `MediaRecorder` is unsupported on older browsers or mobile web views, gracefully falls back to the native Chromium Web Speech API (`SpeechRecognition`).
+* **Downstream Integration**:
+  - Transcripts flow directly into conversational input and option matcher (`matchTranscriptToOption`), maintaining strict parity with persisted interview schemas. Groq LLM integration will consume these transcripts in Phase 3.
 
 ### Text-to-Speech (TTS)
 * **Current**: Sarvam AI API (`Bulbul:v3`) with single-session concurrency guard and browser `speechSynthesis` fallback.
@@ -295,3 +339,61 @@ Citizen Input (Location, Education, Mobility, Trade Interest)
 * **Fallback for Other 12 Scheduled Languages**:
   Browser `speechSynthesis` with native voice matching.
 * **Future**: Bhashini Indic TTS for complete 22-language official coverage.
+
+---
+
+## 5. Phase 3A: Authoritative NSQF / NQR Course Catalog Foundation
+
+### Overview & Data Provenance
+* **Source Dataset**: `NSQF-NQR Course Dataset/` containing 44 Microsoft Excel (`.xlsx`) workbooks.
+* **Volume**: Exactly **2,810** official qualification records across **44** distinct industry sectors.
+* **Integrity**: 0 missing titles, 0 missing codes, 0 missing levels, 0 missing sectors. Exactly 1 duplicate qualification code (`QG-04-ES-00913-2023-V1-SCGJ` shared by two distinct valid courses in Green Jobs) resolved via surrogate primary keys.
+* **Decimal NSQF Levels**: Spans 12 levels from Level 1.0 to Level 7.0 (including recognized half-levels: 2.5, 3.5, 4.5, 5.5, 6.5). Managed via PostgreSQL `NUMERIC(3, 1)`.
+* **Persons with Disability (PwD)**: Dedicated sector containing 231 courses, with explicit disability categories (`VI`, `SHI`, `LD`, `ID`).
+
+### Excluded Sector Policy
+The following 15 sectors are strictly excluded from the recommendation catalog:
+1. Judiciary
+2. Indian Defence Forces
+3. Legal Activities
+4. Legislators
+5. Musical Instruments
+6. Optical Products
+7. Postal Services
+8. Printing
+9. Public Administration
+10. Railways
+11. Real Estate
+12. Religious Professionals
+13. Shipping
+14. Tobacco Industry
+15. Unorganised Sector
+
+Audit finding: 0 records from these 15 sectors exist in the supplied dataset. The ingestion engine enforces this exclusion filter defensively for all future imports.
+
+### Database Architecture & Schema
+* **Migration**: `supabase/migrations/20261003000001_nsqf_nqr_catalog.sql`
+* **Tables**:
+  1. `nsqf_sectors`: Normalized sector taxonomy (`id VARCHAR(64) PRIMARY KEY`, `name VARCHAR(150) UNIQUE`, `course_count INTEGER`, `is_excluded BOOLEAN`).
+  2. `nsqf_qualifications`: Authoritative qualification register (`id UUID PRIMARY KEY`, `q_code VARCHAR(100)`, `title VARCHAR(255)`, `sector_id VARCHAR(64) REFERENCES nsqf_sectors(id)`, `nsqf_level NUMERIC(3, 1)`, `notional_hours_range VARCHAR(50)`, `min_notional_hours`, `max_notional_hours`, `is_pwd BOOLEAN`, `pwd_categories TEXT[]`, `proposed_occupation TEXT`, `progression_pathway TEXT`, `awarding_body TEXT`, `certifying_bodies TEXT`, `training_delivery_hours TEXT`, `raw_metadata JSONB`, `source_file VARCHAR(255)`).
+* **Security & RLS**: Public `SELECT` allowed for catalog discovery; write/upsert restricted to backend `service_role`.
+* **Idempotent Seed**: `supabase/seed_nsqf_catalog.sql` (5.3 MB containing 2,810 idempotent upsert statements).
+
+### API & Service Layer
+* **Module**: `backend/app/services/nsqf_service.py` & `backend/app/api/routes/nsqf.py`
+* **Endpoints**:
+  - `GET /api/nsqf/sectors`: Lists all active sectors with course counts.
+  - `GET /api/nsqf/courses`: Search and multi-criteria filtering (sector, NSQF level, level ranges, hours range, PwD category, search keyword).
+  - `GET /api/nsqf/courses/{course_id:path}`: Full syllabus, occupations, and progression details.
+  - `GET /api/nsqf/stats`: Aggregated metrics across levels, hours, and sectors.
+* **Offline Resilience**: Automatically falls back to high-performance in-memory parsed catalog if PostgreSQL is unconfigured or unreachable.
+
+### Relationship Between Catalog and Recommendation System
+* **Separation of Concerns**:
+  - `nsqf_qualifications` is the *authoritative master catalog* of all official government skills courses.
+  - `opportunities` represents *live training batches / PM-AJAY welfare schemes* with specific local intake quotas, stipends, and provider contracts.
+* **Migration Path**:
+  1. The existing prototype schemes link to qualifications via `opportunities.qp_code = nsqf_qualifications.q_code`.
+  2. In the upcoming adaptive interview phase, citizen assessment maps beneficiary profile attributes (schooling, work experience, location, goal, PwD) to target NSQF qualifications from the authoritative catalog.
+  3. Recommendation output matches target qualifications to live PM-AJAY delivery centers and financial assistance components.
+* **Architectural Rule**: Groq LLM is strictly prohibited from inventing or hallucinating courses. The deterministic catalog is the sole source of course existence.

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Volume2, VolumeX, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, RefreshCw, Globe, MapPin, UserRound, Check } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, RefreshCw, Globe, MapPin, UserRound, Check, Loader2 } from 'lucide-react';
 import { speakWithSarvamAI, stopAIVoice, createSpeechRecognizer } from '../services/aiService';
+import { isAudioRecordingSupported, AudioRecorder } from '../services/audioRecorder';
 import { LANGUAGES } from '../data/languages';
 import { detectLanguageFromVoice } from '../data/uiTranslations';
 import {
@@ -8,12 +9,55 @@ import {
   createOrResumeInterview,
   resolveLocation,
   updateInterview,
+  transcribeAudio,
+  fetchAdaptiveState,
+  submitAdaptiveAnswer,
+  correctStructuredProfileField,
+  completeAdaptiveInterview,
+  interpretVoiceTranscript,
 } from '../services/api';
+import AdaptiveInterviewView from '../components/AdaptiveInterviewView';
 import {
   getInterviewResumeStep,
   hydrateInterviewAnswers,
   toInterviewResponses,
 } from '../services/interviewPersistence';
+
+function matchTranscriptToOption(transcript, options) {
+  if (!transcript || !Array.isArray(options) || options.length === 0) return null;
+  const clean = transcript.toLowerCase().trim();
+
+  // 1. Direct equality
+  const directMatch = options.find(opt => opt.toLowerCase().trim() === clean);
+  if (directMatch) return directMatch;
+
+  // 2. Direct equality without emojis
+  const stripEmojis = (str) => str.replace(/[\p{Emoji}\p{Extended_Pictographic}]/gu, '').toLowerCase().trim();
+  const cleanStripped = stripEmojis(transcript);
+
+  const emojiStrippedMatch = options.find(opt => stripEmojis(opt) === cleanStripped);
+  if (emojiStrippedMatch) return emojiStrippedMatch;
+
+  // 3. Substring match (either contains the other)
+  const substringMatch = options.find(opt => {
+    const stripped = stripEmojis(opt);
+    return cleanStripped.includes(stripped) || (stripped.length > 5 && stripped.includes(cleanStripped));
+  });
+  if (substringMatch) return substringMatch;
+
+  // 4. Keyword token match
+  const words = cleanStripped.split(/[\s,()/-]+/).filter(w => w.length >= 3);
+  for (const opt of options) {
+    const optWords = stripEmojis(opt).split(/[\s,()/-]+/).filter(w => w.length >= 3);
+    for (const word of words) {
+      if (optWords.some(ow => ow.includes(word) || word.includes(ow))) {
+        return opt;
+      }
+    }
+  }
+
+  return null;
+}
 
 const INTERVIEW_STEPS = [
   {
@@ -141,15 +185,21 @@ export default function ConversationPage({
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
+  const [voiceState, setVoiceState] = useState('idle'); // 'idle' | 'recording' | 'transcribing' | 'error'
+  const [voiceError, setVoiceError] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [interviewSession, setInterviewSession] = useState(null);
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);
   const [isInterviewSaving, setIsInterviewSaving] = useState(false);
   const [interviewError, setInterviewError] = useState('');
+  const [adaptiveState, setAdaptiveState] = useState(null);
+  const [clarificationPrompt, setClarificationPrompt] = useState('');
   // Track last spoken step to prevent re-speaking on re-renders or language updates
   const lastSpokenStepRef = useRef(-1);
+  const lastSpokenQuestionIdRef = useRef('');
   const hasSpokenGreetingRef = useRef(false);
   const activeRecognizer = useRef(null);
+  const audioRecorderRef = useRef(null);
   const locationAttemptedRef = useRef(false);
   const interviewLoadKeyRef = useRef('');
 
@@ -178,7 +228,13 @@ export default function ConversationPage({
     setNameInput(userProfile?.fullName || '');
     setResolvedLocation(initialResolvedLocation || null);
     setCurrentStepIndex(resumeStep);
-  }, [initialResolvedLocation, userProfile?.fullName]);
+
+    if (session?.id && beneficiarySession?.sessionToken) {
+      fetchAdaptiveState(session.id, beneficiarySession.sessionToken)
+        .then((state) => setAdaptiveState(state))
+        .catch(() => {});
+    }
+  }, [beneficiarySession?.sessionToken, initialResolvedLocation, userProfile?.fullName]);
 
   const loadOrResumeInterview = useCallback(async (session = beneficiarySession, language = langCode) => {
     if (!session) return null;
@@ -229,8 +285,11 @@ export default function ConversationPage({
   useEffect(() => {
     if (!soundEnabled || isCompleteStep) return;
 
+    const activeAdaptiveQ = adaptiveState?.current_question;
+    const isAdaptiveQuestionNew = activeAdaptiveQ && lastSpokenQuestionIdRef.current !== activeAdaptiveQ.question_id;
+
     // Prevent speaking the same step again on re-render
-    if (lastSpokenStepRef.current === currentStepIndex) return;
+    if (lastSpokenStepRef.current === currentStepIndex && !isAdaptiveQuestionNew) return;
 
     let textToSpeak = "";
     let speechLang = langCode;
@@ -244,6 +303,9 @@ export default function ConversationPage({
       textToSpeak = "Please tell us your name, or type it below.";
     } else if (isLocationStep) {
       textToSpeak = "We need your location to find opportunities and training available near you. Tap the button when you are ready.";
+    } else if (activeAdaptiveQ?.question_text) {
+      textToSpeak = activeAdaptiveQ.question_text;
+      lastSpokenQuestionIdRef.current = activeAdaptiveQ.question_id;
     } else if (spokenQuestion) {
       textToSpeak = spokenQuestion;
     }
@@ -264,7 +326,7 @@ export default function ConversationPage({
     return () => {
       stopAIVoice();
     };
-  }, [currentStepIndex, soundEnabled, isLanguageStep, isNameStep, isLocationStep, spokenQuestion, isCompleteStep, langCode]);
+  }, [currentStepIndex, soundEnabled, isLanguageStep, isNameStep, isLocationStep, spokenQuestion, isCompleteStep, langCode, adaptiveState?.current_question?.question_id]);
 
   // Handle language confirmation (voice or tap)
   const handleConfirmLanguage = (lang) => {
@@ -358,6 +420,7 @@ export default function ConversationPage({
   const continueFromLocation = async () => {
     if (!resolvedLocation || isPersisting || isInterviewLoading) return;
 
+    let activeSession = interviewSession;
     if (!beneficiarySession && onEnsureBeneficiary) {
       const session = await onEnsureBeneficiary({
         name: nameInput,
@@ -365,19 +428,207 @@ export default function ConversationPage({
         resolvedLocation,
       });
       if (!session) return;
-      const loaded = await loadOrResumeInterview(session, langCode);
-      if (!loaded) return;
+      activeSession = await loadOrResumeInterview(session, langCode);
+      if (!activeSession) return;
     } else if (!interviewSession) {
-      const loaded = await loadOrResumeInterview(beneficiarySession, langCode);
-      if (!loaded) return;
+      activeSession = await loadOrResumeInterview(beneficiarySession, langCode);
+      if (!activeSession) return;
     }
 
     setAnswers(previous => ({ ...previous, name: nameInput.trim(), location: resolvedLocation }));
     setCurrentStepIndex(3);
+
+    // Initial adaptive interview state load
+    if (activeSession && beneficiarySession) {
+      try {
+        const state = await fetchAdaptiveState(activeSession.id, beneficiarySession.sessionToken);
+        setAdaptiveState(state);
+      } catch (err) {
+        console.warn('Could not load adaptive interview state:', err);
+      }
+    }
   };
 
-  // Handle answering interview steps
+  // Adaptive interview answer submission
+  const handleSelectAdaptiveOption = async (normalizedVal, rawVal) => {
+    if (!interviewSession || !beneficiarySession || isInterviewSaving) return;
+    stopAIVoice();
+    if (activeRecognizer.current) {
+      try { activeRecognizer.current.stop(); } catch {}
+    }
+    setIsListening(false);
+    setLiveTranscript('');
+    setClarificationPrompt('');
+    setIsInterviewSaving(true);
+    setInterviewError('');
+
+    try {
+      const qId = adaptiveState?.current_question?.question_id || 'general';
+      const updated = await submitAdaptiveAnswer(
+        interviewSession.id,
+        beneficiarySession.sessionToken,
+        {
+          question_id: qId,
+          raw_answer: typeof rawVal === 'string' ? rawVal : JSON.stringify(rawVal),
+          normalized_answer: normalizedVal,
+          input_method: 'option',
+          language: langCode,
+        }
+      );
+      setAdaptiveState(updated);
+      if (updated.profile_summary) {
+        setAnswers(prev => ({
+          ...prev,
+          workInterest: updated.profile_summary.interested_sector_name || prev.workInterest,
+          education: updated.profile_summary.education_label || prev.education,
+          mobility: updated.profile_summary.mobility_preference || prev.mobility,
+          preference: updated.profile_summary.primary_goal || prev.preference,
+        }));
+      }
+
+      if (updated.is_completed) {
+        setCurrentStepIndex(INTERVIEW_STEPS.length + 3);
+      }
+    } catch (err) {
+      setInterviewError(err?.message || 'Failed to submit answer. Please try again.');
+    } finally {
+      setIsInterviewSaving(false);
+    }
+  };
+
+  const handleAdaptiveVoiceAnswer = async (transcript) => {
+    if (!adaptiveState?.current_question || !interviewSession || !beneficiarySession) return;
+    const currentQ = adaptiveState.current_question;
+    let matchedVal = null;
+    let matchedLabel = null;
+
+    if (currentQ.options && currentQ.options.length > 0) {
+      const labels = currentQ.options.map(o => o.label);
+      const matchedLabelOpt = matchTranscriptToOption(transcript, labels);
+      if (matchedLabelOpt) {
+        const found = currentQ.options.find(o => o.label === matchedLabelOpt);
+        if (found) {
+          matchedVal = found.value;
+          matchedLabel = found.label;
+        }
+      }
+    }
+
+    if (matchedVal) {
+      // Deterministic fast-path when exact option matched
+      await handleSelectAdaptiveOption(matchedVal, matchedLabel);
+    } else {
+      // Conversational Groq Interpretation Layer
+      setIsInterviewSaving(true);
+      setInterviewError('');
+      try {
+        const res = await interpretVoiceTranscript(
+          interviewSession.id,
+          beneficiarySession.sessionToken,
+          transcript,
+          langCode,
+          currentQ.question_id,
+        );
+
+        // Check if clarification is needed (e.g. ambiguity or missing specifics)
+        if (res.clarification_needed && res.clarification_question) {
+          setInterviewError('');
+          setClarificationPrompt(res.clarification_question);
+          if (soundEnabled) {
+            setIsSpeaking(true);
+            speakWithSarvamAI({
+              text: res.clarification_question,
+              languageId: langCode,
+              speaker: 'priya',
+            }).finally(() => setIsSpeaking(false));
+          }
+          return;
+        }
+
+        // Check if contradiction was detected
+        if (res.contradiction_detected && res.contradiction_message) {
+          setInterviewError('');
+          setClarificationPrompt(res.contradiction_message);
+          if (soundEnabled) {
+            setIsSpeaking(true);
+            speakWithSarvamAI({
+              text: res.contradiction_message,
+              languageId: langCode,
+              speaker: 'priya',
+            }).finally(() => setIsSpeaking(false));
+          }
+          return;
+        }
+
+        setClarificationPrompt('');
+        if (res.updated_state) {
+          setAdaptiveState(res.updated_state);
+          if (res.updated_state.profile_summary) {
+            setAnswers(prev => ({
+              ...prev,
+              workInterest: res.updated_state.profile_summary.interested_sector_name || prev.workInterest,
+              education: res.updated_state.profile_summary.education_label || prev.education,
+              mobility: res.updated_state.profile_summary.mobility_preference || prev.mobility,
+              preference: res.updated_state.profile_summary.primary_goal || prev.preference,
+            }));
+          }
+          if (res.updated_state.is_completed) {
+            setCurrentStepIndex(INTERVIEW_STEPS.length + 3);
+          }
+        }
+      } catch (err) {
+        setInterviewError(err?.message || 'Failed to interpret speech. Please try again or select an option.');
+      } finally {
+        setIsInterviewSaving(false);
+      }
+    }
+  };
+
+  const handleCorrectProfileField = async (fieldName, value) => {
+    if (!interviewSession || !beneficiarySession) return;
+    setIsInterviewSaving(true);
+    try {
+      const updatedProfile = await correctStructuredProfileField(
+        interviewSession.id,
+        beneficiarySession.sessionToken,
+        fieldName,
+        value,
+      );
+      setAdaptiveState(prev => prev ? ({ ...prev, profile_summary: updatedProfile }) : prev);
+    } catch (err) {
+      setInterviewError('Failed to update field.');
+    } finally {
+      setIsInterviewSaving(false);
+    }
+  };
+
+  const handleCompleteAdaptiveInterview = async () => {
+    if (!interviewSession || !beneficiarySession || isInterviewSaving) return;
+    setIsInterviewSaving(true);
+    setInterviewError('');
+    try {
+      const finalState = await completeAdaptiveInterview(
+        interviewSession.id,
+        beneficiarySession.sessionToken,
+      );
+      setAdaptiveState(finalState);
+      setCurrentStepIndex(INTERVIEW_STEPS.length + 3);
+      if (onCompleteConversation) {
+        onCompleteConversation({
+          ...answers,
+          ...finalState.profile_summary,
+        });
+      }
+    } catch (err) {
+      setInterviewError('Could not complete interview. Please try again.');
+    } finally {
+      setIsInterviewSaving(false);
+    }
+  };
+
+  // Handle answering interview steps (legacy fallback)
   const handleSelectAnswer = async (selectedText) => {
+
     if (!currentInterviewStep || isInterviewSaving || isInterviewLoading) return;
     stopAIVoice();
     if (activeRecognizer.current) {
@@ -468,37 +719,109 @@ export default function ConversationPage({
     }
   };
 
-  // Voice recording
-  const startVoiceInput = () => {
+  // Reset voice state on step switch
+  useEffect(() => {
+    setVoiceError('');
+    setLiveTranscript('');
+    if (audioRecorderRef.current) {
+      audioRecorderRef.current.cancel();
+      audioRecorderRef.current = null;
+    }
+    if (activeRecognizer.current) {
+      try { activeRecognizer.current.stop(); } catch {}
+      activeRecognizer.current = null;
+    }
+    setIsListening(false);
+    setVoiceState('idle');
+  }, [currentStepIndex]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.cancel();
+        audioRecorderRef.current = null;
+      }
+      if (activeRecognizer.current) {
+        try { activeRecognizer.current.stop(); } catch {}
+        activeRecognizer.current = null;
+      }
+    };
+  }, []);
+
+  // Voice recording via backend Sarvam STT with browser SpeechRecognition fallback
+  const startVoiceInput = async () => {
     stopAIVoice();
+    setVoiceError('');
     setLiveTranscript('');
 
+    // Primary Path: MediaRecorder -> Backend Sarvam STT
+    if (isAudioRecordingSupported()) {
+      try {
+        const recorder = new AudioRecorder({
+          maxDurationMs: 25000,
+          onMaxDurationReached: () => {
+            stopVoiceInput();
+          },
+        });
+        await recorder.start();
+        audioRecorderRef.current = recorder;
+        setIsListening(true);
+        setVoiceState('recording');
+        return;
+      } catch (err) {
+        if (err.message === 'PERMISSION_DENIED') {
+          setVoiceError('Microphone permission was not granted. Please allow microphone access in your browser settings.');
+          setVoiceState('error');
+          setIsListening(false);
+          return;
+        } else if (err.message === 'DEVICE_NOT_FOUND') {
+          setVoiceError('No microphone detected on your device.');
+          setVoiceState('error');
+          setIsListening(false);
+          return;
+        }
+        // Other errors fall through to browser recognizer fallback
+      }
+    }
+
+    // Fallback Path: Browser Web Speech API
     const recognizer = createSpeechRecognizer({
       languageId: isLanguageStep ? 'en' : langCode,
       onResult: (transcript, isFinal) => {
         setLiveTranscript(transcript);
 
         if (isLanguageStep) {
-          // Detect spoken language
           const detected = detectLanguageFromVoice(transcript, LANGUAGES);
           if (detected) {
             setIsListening(false);
+            setVoiceState('idle');
             handleConfirmLanguage(detected);
           }
+        } else if (isNameStep) {
+          if (transcript.trim()) {
+            setNameInput(transcript.trim());
+          }
         } else {
-          // Regular interview answer
-          if (isFinal && transcript.trim()) {
+          const currentOptions = currentInterviewStep
+            ? (currentInterviewStep.options[langCode] || currentInterviewStep.options.hi || currentInterviewStep.options.en)
+            : [];
+          const matched = matchTranscriptToOption(transcript, currentOptions);
+          if (isFinal && matched) {
             setIsListening(false);
-            handleSelectAnswer(transcript);
+            setVoiceState('idle');
+            handleSelectAnswer(matched);
           }
         }
       },
       onError: (err) => {
-        console.warn("Speech error:", err);
+        console.warn("Speech fallback error:", err);
         setIsListening(false);
+        setVoiceState('idle');
       },
       onEnd: () => {
         setIsListening(false);
+        setVoiceState('idle');
       }
     });
 
@@ -506,28 +829,108 @@ export default function ConversationPage({
       try {
         recognizer.start();
         setIsListening(true);
+        setVoiceState('recording');
         activeRecognizer.current = recognizer;
-      } catch (e) {
+      } catch {
         setIsListening(false);
+        setVoiceState('idle');
       }
     } else {
       setIsListening(false);
+      setVoiceState('idle');
+      setVoiceError('Voice input is not supported in this browser. Please tap an option below.');
     }
   };
 
-  const stopVoiceInput = () => {
+  const stopVoiceInput = async () => {
+    // 1. Primary Path: Process audio recorded by MediaRecorder via Sarvam STT
+    if (audioRecorderRef.current) {
+      const recorder = audioRecorderRef.current;
+      audioRecorderRef.current = null;
+      setIsListening(false);
+      setVoiceState('transcribing');
+
+      try {
+        const audioResult = await recorder.stop();
+        if (!audioResult?.blob || audioResult.blob.size === 0) {
+          setVoiceState('idle');
+          return;
+        }
+
+        const languageHint = isLanguageStep ? 'unknown' : langCode;
+        const result = await transcribeAudio(
+          audioResult.blob,
+          languageHint,
+          beneficiarySession?.sessionToken,
+        );
+
+        const transcript = result?.transcript?.trim();
+        setVoiceState('idle');
+
+        if (!transcript) {
+          setVoiceError('We could not detect clear speech. Please try speaking again.');
+          return;
+        }
+
+        setLiveTranscript(transcript);
+
+        if (isLanguageStep) {
+          const detected = detectLanguageFromVoice(transcript, LANGUAGES);
+          if (detected) {
+            handleConfirmLanguage(detected);
+          } else {
+            setVoiceError(`Heard: "${transcript}". Please tap your preferred language.`);
+          }
+        } else if (isNameStep) {
+          setNameInput(transcript);
+        } else if (adaptiveState && !isLanguageStep && !isNameStep && !isLocationStep) {
+          handleAdaptiveVoiceAnswer(transcript);
+        } else if (currentInterviewStep) {
+          const currentOptions = currentInterviewStep.options[langCode]
+            || currentInterviewStep.options.hi
+            || currentInterviewStep.options.en
+            || [];
+          const matched = matchTranscriptToOption(transcript, currentOptions);
+          if (matched) {
+            handleSelectAnswer(matched);
+          } else {
+            setVoiceError(`Recognized: "${transcript}". Please tap the closest matching option below.`);
+          }
+        }
+      } catch (err) {
+        setVoiceState('error');
+        setVoiceError(err?.message || 'Voice recognition is temporarily unavailable. Please tap an option.');
+      }
+      return;
+    }
+
+    // 2. Fallback Path: Browser Web Speech API
     if (activeRecognizer.current) {
-      try { activeRecognizer.current.stop(); } catch (e) {}
+      try { activeRecognizer.current.stop(); } catch {}
+      activeRecognizer.current = null;
     }
     setIsListening(false);
+    setVoiceState('idle');
+
     if (liveTranscript.trim()) {
       if (isLanguageStep) {
         const detected = detectLanguageFromVoice(liveTranscript, LANGUAGES);
         if (detected) {
           handleConfirmLanguage(detected);
         }
-      } else {
-        handleSelectAnswer(liveTranscript);
+      } else if (isNameStep) {
+        setNameInput(liveTranscript.trim());
+      } else if (adaptiveState && !isLanguageStep && !isNameStep && !isLocationStep) {
+        handleAdaptiveVoiceAnswer(liveTranscript.trim());
+      } else if (currentInterviewStep) {
+        const currentOptions = currentInterviewStep.options[langCode]
+          || currentInterviewStep.options.hi
+          || currentInterviewStep.options.en
+          || [];
+        const matched = matchTranscriptToOption(liveTranscript, currentOptions);
+        if (matched) {
+          handleSelectAnswer(matched);
+        }
       }
     }
   };
@@ -549,6 +952,8 @@ export default function ConversationPage({
       text = "Please tell us your name, or type it below.";
     } else if (isLocationStep) {
       text = "We need your location to find opportunities and training available near you.";
+    } else if (adaptiveState?.current_question?.question_text) {
+      text = adaptiveState.current_question.question_text;
     } else if (currentInterviewStep) {
       text = currentInterviewStep.question[langCode] || currentInterviewStep.question.hi || currentInterviewStep.question.en;
     }
@@ -599,12 +1004,15 @@ export default function ConversationPage({
           <div className="mb-6 flex flex-col items-center">
             <button
               onClick={isListening ? stopVoiceInput : startVoiceInput}
+              disabled={voiceState === 'transcribing'}
               className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl active:scale-95 focus:outline-none ${
                 isListening 
                   ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-300' 
-                  : 'bg-[#134e40] text-white hover:bg-[#0d3b30] hover:scale-105'
+                  : voiceState === 'transcribing'
+                    ? 'bg-amber-600 text-white animate-pulse ring-4 ring-amber-200'
+                    : 'bg-[#134e40] text-white hover:bg-[#0d3b30] hover:scale-105'
               }`}
-              title="Tap and say your language"
+              title={isListening ? "Tap to finish & transcribe" : "Tap and say your language"}
             >
               {isListening && (
                 <>
@@ -612,16 +1020,28 @@ export default function ConversationPage({
                   <span className="absolute -inset-2 rounded-full border-2 border-red-500 animate-pulse opacity-50" />
                 </>
               )}
-              <Mic className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
+              {voiceState === 'transcribing' ? (
+                <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 relative z-10 animate-spin" />
+              ) : (
+                <Mic className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
+              )}
             </button>
 
             <span className="mt-3 text-xs sm:text-sm font-semibold text-[#134e40]">
-              {isListening 
-                ? (liveTranscript ? `Hearing: "${liveTranscript}"...` : "Listening... Say 'বাংলা', 'Hindi', 'Tamil'...")
-                : isSpeaking 
-                  ? "Speaking greeting aloud (Sarvam AI)..."
-                  : "Tap to Speak your language"}
+              {voiceState === 'transcribing'
+                ? "Transcribing your voice (Sarvam AI)..."
+                : isListening 
+                  ? (liveTranscript ? `Hearing: "${liveTranscript}"...` : "Listening... Tap mic when finished speaking.")
+                  : isSpeaking 
+                    ? "Speaking greeting aloud (Sarvam AI)..."
+                    : "Tap to Speak your language"}
             </span>
+
+            {voiceError && (
+              <p className="mt-2 text-xs text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 font-medium max-w-sm">
+                {voiceError}
+              </p>
+            )}
           </div>
 
           {/* 22 Language Cards Grid */}
@@ -675,16 +1095,52 @@ export default function ConversationPage({
             What should we call you?
           </h2>
           <p className="text-sm text-[#37474F] mb-6">Tell us your name so we can personalize your Utthan journey.</p>
-          <input
-            value={nameInput}
-            onChange={(event) => setNameInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') continueFromName();
-            }}
-            placeholder="Enter your name"
-            aria-label="Your name"
-            className="w-full px-4 py-3 rounded-2xl border border-[#b8ded6] bg-white text-[#263238] focus:outline-none focus:ring-2 focus:ring-[#134e40]/30 mb-5"
-          />
+          <div className="relative mb-5">
+            <input
+              value={nameInput}
+              onChange={(event) => setNameInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') continueFromName();
+              }}
+              placeholder="Type or speak your name"
+              aria-label="Your name"
+              className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-[#b8ded6] bg-white text-[#263238] focus:outline-none focus:ring-2 focus:ring-[#134e40]/30"
+            />
+            <button
+              type="button"
+              onClick={isListening ? stopVoiceInput : startVoiceInput}
+              disabled={voiceState === 'transcribing'}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
+                isListening
+                  ? 'bg-red-600 text-white animate-pulse'
+                  : voiceState === 'transcribing'
+                    ? 'bg-amber-600 text-white animate-pulse'
+                    : 'bg-[#FAF7F0] text-[#134e40] hover:bg-[#134e40] hover:text-white border border-[#b8ded6]'
+              }`}
+              title={isListening ? "Tap to finish speaking" : "Speak your name"}
+            >
+              {voiceState === 'transcribing' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+          {isListening && (
+            <p className="text-xs text-red-600 font-semibold mb-3 animate-pulse">
+              Listening... Speak your name aloud, then tap mic to stop.
+            </p>
+          )}
+          {voiceState === 'transcribing' && (
+            <p className="text-xs text-amber-700 font-semibold mb-3 animate-pulse">
+              Transcribing name (Sarvam AI)...
+            </p>
+          )}
+          {voiceError && (
+            <p className="text-xs text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 font-medium mb-3">
+              {voiceError}
+            </p>
+          )}
           <div className="w-full flex items-center justify-between pt-4 border-t border-gray-100 text-xs text-[#718078]">
             <button
               onClick={() => setCurrentStepIndex(0)}
@@ -791,128 +1247,173 @@ export default function ConversationPage({
       )}
 
       {/* ============================================================ */}
-      {/* 4. STEPS 3-6: STEP-BY-STEP VOICE ASSISTANT INTERVIEW        */}
+      {/* 4. ADAPTIVE BENEFICIARY INTERVIEW + STRUCTURED PROFILE     */}
       {/* ============================================================ */}
-      {!isLanguageStep && !isCompleteStep && currentInterviewStep && (
-        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-[#b8ded6] shadow-xl max-w-2xl w-full flex flex-col items-center text-center transition-all animate-in fade-in duration-300">
-          
-          {/* Top Step Pill & Voice Controls */}
-          <div className="w-full flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#134e40] bg-[#FAF7F0] px-3.5 py-1.5 rounded-full border border-[#b8ded6]">
-              <Sparkles className="w-3.5 h-3.5 text-[#e69943]" />
-              <span>{currentInterviewStep.badge[langCode] || currentInterviewStep.badge.hi || currentInterviewStep.badge.en}</span>
+      {!isLanguageStep && !isNameStep && !isLocationStep && !isCompleteStep && (
+        adaptiveState ? (
+          <AdaptiveInterviewView
+            adaptiveState={adaptiveState}
+            onSelectOption={handleSelectAdaptiveOption}
+            onSubmitTextAnswer={(text) => handleSelectAdaptiveOption(text, text)}
+            onCorrectField={handleCorrectProfileField}
+            onCompleteInterview={handleCompleteAdaptiveInterview}
+            onBack={() => {
+              // allow back where safely possible
+            }}
+            isListening={isListening}
+            voiceState={voiceState}
+            voiceError={voiceError}
+            liveTranscript={liveTranscript}
+            onStartVoice={startVoiceInput}
+            onStopVoice={stopVoiceInput}
+            soundEnabled={soundEnabled}
+            onToggleSound={() => {
+              if (soundEnabled) stopAIVoice();
+              setSoundEnabled(!soundEnabled);
+            }}
+            onReplayQuestion={handleReplayQuestion}
+            isSpeaking={isSpeaking}
+            isSaving={isInterviewSaving}
+            errorMessage={interviewError}
+            clarificationMessage={clarificationPrompt}
+            langCode={langCode}
+          />
+        ) : currentInterviewStep ? (
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-[#b8ded6] shadow-xl max-w-2xl w-full flex flex-col items-center text-center transition-all animate-in fade-in duration-300">
+            {/* Top Step Pill & Voice Controls */}
+            <div className="w-full flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#134e40] bg-[#FAF7F0] px-3.5 py-1.5 rounded-full border border-[#b8ded6]">
+                <Sparkles className="w-3.5 h-3.5 text-[#e69943]" />
+                <span>{currentInterviewStep.badge[langCode] || currentInterviewStep.badge.hi || currentInterviewStep.badge.en}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (soundEnabled) stopAIVoice();
+                    setSoundEnabled(!soundEnabled);
+                  }}
+                  className={`p-2 rounded-full border transition-colors ${
+                    soundEnabled ? 'bg-[#134e40] text-white border-[#134e40]' : 'bg-white text-[#718078] border-[#cbd5e1]'
+                  }`}
+                  title={soundEnabled ? "Audio ON" : "Audio Muted"}
+                >
+                  {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                </button>
+
+                <button
+                  onClick={handleReplayQuestion}
+                  className={`p-2 rounded-full border border-[#b8ded6] hover:bg-[#FAF7F0] text-[#134e40] transition-colors ${
+                    isSpeaking ? 'bg-emerald-100 animate-pulse ring-2 ring-emerald-400' : 'bg-white'
+                  }`}
+                  title="Re-listen question"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-6 border border-[#b8ded6]/40">
+              <div 
+                className="bg-[#134e40] h-full transition-all duration-500 rounded-full"
+                style={{ width: `${((currentStepIndex - 1) / (INTERVIEW_STEPS.length + 2)) * 100}%` }}
+              />
+            </div>
+
+            {/* Question Heading in Preferred Language */}
+            <h2 className="font-serif-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#134e40] leading-snug mb-6 max-w-xl">
+              {currentInterviewStep.question[langCode] || currentInterviewStep.question.hi || currentInterviewStep.question.en}
+            </h2>
+
+            {/* Center Voice Mic Button */}
+            <div className="mb-6 flex flex-col items-center">
+              <button
+                onClick={isListening ? stopVoiceInput : startVoiceInput}
+                disabled={voiceState === 'transcribing'}
+                className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl active:scale-95 focus:outline-none ${
+                  isListening 
+                    ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-300' 
+                    : voiceState === 'transcribing'
+                      ? 'bg-amber-600 text-white animate-pulse ring-4 ring-amber-200'
+                      : 'bg-[#134e40] text-white hover:bg-[#0d3b30] hover:scale-105'
+                }`}
+                title={isListening ? "Tap to finish & transcribe" : "Tap to Speak your answer"}
+              >
+                {isListening && (
+                  <>
+                    <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-75" />
+                    <span className="absolute -inset-2 rounded-full border-2 border-red-500 animate-pulse opacity-50" />
+                  </>
+                )}
+                {voiceState === 'transcribing' ? (
+                  <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 relative z-10 animate-spin" />
+                ) : (
+                  <Mic className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
+                )}
+              </button>
+
+              <span className="mt-3 text-xs sm:text-sm font-semibold text-[#134e40]">
+                {voiceState === 'transcribing'
+                  ? "Transcribing your answer (Sarvam AI)..."
+                  : isListening 
+                    ? (liveTranscript ? `"${liveTranscript}"` : `Listening in ${currentLanguage.nativeName}... Tap mic when finished`)
+                    : isSpeaking 
+                      ? "Speaking question aloud (Sarvam AI)..."
+                      : "Tap to Speak your answer"}
+              </span>
+
+              {voiceError && (
+                <p className="mt-2 text-xs text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 font-medium max-w-md">
+                  {voiceError}
+                </p>
+              )}
+            </div>
+
+            {/* Option Cards */}
+            <div className="w-full">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="h-px bg-gray-200 flex-1" />
+                <span className="text-[11px] font-bold text-[#718078] uppercase tracking-wider">
+                  Or Tap an Option
+                </span>
+                <span className="h-px bg-gray-200 flex-1" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
+                {(currentInterviewStep.options[langCode] || currentInterviewStep.options.hi || currentInterviewStep.options.en).map((opt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelectAnswer(opt)}
+                    disabled={isInterviewSaving || isInterviewLoading}
+                    className="p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#134e40] text-[#134e40] hover:text-white border border-[#b8ded6] hover:border-[#134e40] text-xs sm:text-sm font-semibold text-left transition-all shadow-sm hover:shadow-md active:scale-98 flex items-center justify-between group"
+                  >
+                    <span>{opt}</span>
+                    <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Back Button */}
+            <div className="w-full flex items-center justify-between mt-6 pt-4 border-t border-gray-100 text-xs text-[#718078]">
               <button
                 onClick={() => {
-                  if (soundEnabled) stopAIVoice();
-                  setSoundEnabled(!soundEnabled);
+                  stopAIVoice();
+                  setCurrentStepIndex(prev => Math.max(3, prev - 1));
                 }}
-                className={`p-2 rounded-full border transition-colors ${
-                  soundEnabled ? 'bg-[#134e40] text-white border-[#134e40]' : 'bg-white text-[#718078] border-[#cbd5e1]'
-                }`}
-                title={soundEnabled ? "Audio ON" : "Audio Muted"}
+                className="flex items-center gap-1 hover:text-[#134e40] font-medium"
               >
-                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
               </button>
-
-              <button
-                onClick={handleReplayQuestion}
-                className={`p-2 rounded-full border border-[#b8ded6] hover:bg-[#FAF7F0] text-[#134e40] transition-colors ${
-                  isSpeaking ? 'bg-emerald-100 animate-pulse ring-2 ring-emerald-400' : 'bg-white'
-                }`}
-                title="Re-listen question"
-              >
-                <Volume2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-6 border border-[#b8ded6]/40">
-            <div 
-              className="bg-[#134e40] h-full transition-all duration-500 rounded-full"
-              style={{ width: `${((currentStepIndex - 1) / (INTERVIEW_STEPS.length + 2)) * 100}%` }}
-            />
-          </div>
-
-          {/* Question Heading in Preferred Language */}
-          <h2 className="font-serif-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#134e40] leading-snug mb-6 max-w-xl">
-            {currentInterviewStep.question[langCode] || currentInterviewStep.question.hi || currentInterviewStep.question.en}
-          </h2>
-
-          {/* Center Voice Mic Button */}
-          <div className="mb-6 flex flex-col items-center">
-            <button
-              onClick={isListening ? stopVoiceInput : startVoiceInput}
-              className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl active:scale-95 focus:outline-none ${
-                isListening 
-                  ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-300' 
-                  : 'bg-[#134e40] text-white hover:bg-[#0d3b30] hover:scale-105'
-              }`}
-              title="Tap to Speak your answer"
-            >
-              {isListening && (
-                <>
-                  <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-75" />
-                  <span className="absolute -inset-2 rounded-full border-2 border-red-500 animate-pulse opacity-50" />
-                </>
-              )}
-              <Mic className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
-            </button>
-
-            <span className="mt-3 text-xs sm:text-sm font-semibold text-[#134e40]">
-              {isListening 
-                ? (liveTranscript ? `"${liveTranscript}"` : `Listening in ${currentLanguage.nativeName}... Speak now!`)
-                : isSpeaking 
-                  ? "Speaking question aloud (Sarvam AI)..."
-                  : "Tap to Speak your answer"}
-            </span>
-          </div>
-
-          {/* Option Cards */}
-          <div className="w-full">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <span className="h-px bg-gray-200 flex-1" />
-              <span className="text-[11px] font-bold text-[#718078] uppercase tracking-wider">
-                Or Tap an Option
-              </span>
-              <span className="h-px bg-gray-200 flex-1" />
+              <span className="font-semibold">Step {currentStepIndex - 1} of {INTERVIEW_STEPS.length + 2}</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
-              {(currentInterviewStep.options[langCode] || currentInterviewStep.options.hi || currentInterviewStep.options.en).map((opt, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSelectAnswer(opt)}
-                  disabled={isInterviewSaving || isInterviewLoading}
-                  className="p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#134e40] text-[#134e40] hover:text-white border border-[#b8ded6] hover:border-[#134e40] text-xs sm:text-sm font-semibold text-left transition-all shadow-sm hover:shadow-md active:scale-98 flex items-center justify-between group"
-                >
-                  <span>{opt}</span>
-                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
-                </button>
-              ))}
-            </div>
           </div>
-
-          {/* Bottom Back Button */}
-          <div className="w-full flex items-center justify-between mt-6 pt-4 border-t border-gray-100 text-xs text-[#718078]">
-            <button
-              onClick={() => {
-                stopAIVoice();
-                setCurrentStepIndex(prev => Math.max(3, prev - 1));
-              }}
-              className="flex items-center gap-1 hover:text-[#134e40] font-medium"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back</span>
-            </button>
-            <span className="font-semibold">Step {currentStepIndex - 1} of {INTERVIEW_STEPS.length + 2}</span>
-          </div>
-
-        </div>
+        ) : null
       )}
+
 
       {/* ============================================================ */}
       {/* 3. COMPLETION SCREEN: SUMMARY & MATCHED SCHEMES             */}

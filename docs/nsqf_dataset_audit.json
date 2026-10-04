@@ -1,0 +1,1359 @@
+{
+  "total_files": 44,
+  "total_rows": 2810,
+  "header_columns": [
+    "S No.",
+    "Title",
+    "Code",
+    "Description",
+    "Sector Name",
+    "Level",
+    "Maximum Notational Hours",
+    "Minimum Notational Hours",
+    "Version",
+    "Originally Approved",
+    "Valid Till",
+    "Awarding Body",
+    "Certifying Bodies",
+    "Proposed Occupation",
+    "Progression Pathway",
+    "Qualifcation Type",
+    "Adopted Qualifcation",
+    "Training Delivery Hours"
+  ],
+  "files": [
+    {
+      "filename": "Qualifications 02-10-2026 19_19_25.xlsx",
+      "sector": "Aerospace & Aviation",
+      "row_count": 19,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_00_04.xlsx",
+      "sector": "Agriculture",
+      "row_count": 185,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_00_12.xlsx",
+      "sector": "Apparel",
+      "row_count": 43,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_01_23.xlsx",
+      "sector": "Automotive",
+      "row_count": 120,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_01_35.xlsx",
+      "sector": "Beauty & Wellness",
+      "row_count": 58,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_01_48.xlsx",
+      "sector": "BFSI",
+      "row_count": 19,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_01_56.xlsx",
+      "sector": "Capital Goods & Manufacturing",
+      "row_count": 107,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_02_03.xlsx",
+      "sector": "Chemicals & Petrochemicals",
+      "row_count": 20,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_02_11.xlsx",
+      "sector": "Construction",
+      "row_count": 102,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_02_20.xlsx",
+      "sector": "Education, Training & Research",
+      "row_count": 34,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_02_28.xlsx",
+      "sector": "Electronics & HW",
+      "row_count": 234,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_05_50.xlsx",
+      "sector": "Environmental Science",
+      "row_count": 64,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_06_01.xlsx",
+      "sector": "Food Industry/Food Processing",
+      "row_count": 53,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_06_13.xlsx",
+      "sector": "Gem & Jewellery",
+      "row_count": 4,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_06_20.xlsx",
+      "sector": "Glass & Ceramics",
+      "row_count": 1,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_06_27.xlsx",
+      "sector": "Handicrafts & Carpets",
+      "row_count": 139,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_06_35.xlsx",
+      "sector": "Healthcare",
+      "row_count": 117,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_06_44.xlsx",
+      "sector": "Home Management and Caregiving",
+      "row_count": 31,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_06_54.xlsx",
+      "sector": "Hydrocarbon",
+      "row_count": 76,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_07_07.xlsx",
+      "sector": "Infrastructure",
+      "row_count": 28,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_07_14.xlsx",
+      "sector": "Instrumentation",
+      "row_count": 9,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_07_21.xlsx",
+      "sector": "Iron & Steel",
+      "row_count": 47,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_07_27.xlsx",
+      "sector": "IT-ITeS",
+      "row_count": 316,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_07_41.xlsx",
+      "sector": "Leather",
+      "row_count": 15,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_09_04.xlsx",
+      "sector": "Life Sciences",
+      "row_count": 67,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_09_12.xlsx",
+      "sector": "Management",
+      "row_count": 1,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_09_21.xlsx",
+      "sector": "Media & Entertainment",
+      "row_count": 125,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_09_28.xlsx",
+      "sector": "Mining",
+      "row_count": 30,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_09_55.xlsx",
+      "sector": "Office Administration & Facility Management",
+      "row_count": 52,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_10_20.xlsx",
+      "sector": "Paints & Coatings",
+      "row_count": 4,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_10_28.xlsx",
+      "sector": "Paper & Paper Products",
+      "row_count": 1,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_10_35.xlsx",
+      "sector": "Persons with Disability",
+      "row_count": 231,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_10_44.xlsx",
+      "sector": "Plumbing",
+      "row_count": 14,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_12_11.xlsx",
+      "sector": "Power",
+      "row_count": 22,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_12_33.xlsx",
+      "sector": "Private Security",
+      "row_count": 2,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_13_43.xlsx",
+      "sector": "Retail",
+      "row_count": 28,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_13_51.xlsx",
+      "sector": "Rubber Industry",
+      "row_count": 34,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_14_41.xlsx",
+      "sector": "Sports, Physical Education, Fitness & Leisure",
+      "row_count": 41,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_14_49.xlsx",
+      "sector": "Telecom",
+      "row_count": 64,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_14_57.xlsx",
+      "sector": "Textile & Handloom",
+      "row_count": 72,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_15_23.xlsx",
+      "sector": "Tourism & Hospitality",
+      "row_count": 79,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_15_31.xlsx",
+      "sector": "Transportation, Logistics & Warehousing",
+      "row_count": 74,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_15_58.xlsx",
+      "sector": "Water Supply, Sewerage, Waste Management & Remediation activities",
+      "row_count": 6,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    },
+    {
+      "filename": "Qualifications 02-10-2026 20_16_08.xlsx",
+      "sector": "Wood & Carpentry",
+      "row_count": 22,
+      "headers": [
+        "S No.",
+        "Title",
+        "Code",
+        "Description",
+        "Sector Name"
+      ]
+    }
+  ],
+  "sectors": {
+    "Aerospace & Aviation": 19,
+    "Agriculture": 185,
+    "Apparel": 43,
+    "Automotive": 120,
+    "Beauty & Wellness": 58,
+    "BFSI": 19,
+    "Capital Goods & Manufacturing": 107,
+    "Chemicals & Petrochemicals": 20,
+    "Construction": 102,
+    "Education, Training & Research": 34,
+    "Electronics & HW": 234,
+    "Environmental Science": 64,
+    "Food Industry/Food Processing": 53,
+    "Gem & Jewellery": 4,
+    "Glass & Ceramics": 1,
+    "Handicrafts & Carpets": 139,
+    "Healthcare": 117,
+    "Home Management and Caregiving": 31,
+    "Hydrocarbon": 76,
+    "Infrastructure": 28,
+    "Instrumentation": 9,
+    "Iron & Steel": 47,
+    "IT-ITeS": 316,
+    "Leather": 15,
+    "Life Sciences": 67,
+    "Management": 1,
+    "Media & Entertainment": 125,
+    "Mining": 30,
+    "Office Administration & Facility Management": 52,
+    "Paints & Coatings": 4,
+    "Paper & Paper Products": 1,
+    "Persons with Disability": 231,
+    "Plumbing": 14,
+    "Power": 22,
+    "Private Security": 2,
+    "Retail": 28,
+    "Rubber Industry": 34,
+    "Sports, Physical Education, Fitness & Leisure": 41,
+    "Telecom": 64,
+    "Textile & Handloom": 72,
+    "Tourism & Hospitality": 79,
+    "Transportation, Logistics & Warehousing": 74,
+    "Water Supply, Sewerage, Waste Management & Remediation activities": 6,
+    "Wood & Carpentry": 22
+  },
+  "excluded_sectors_found": {},
+  "levels": {
+    "1.0": 14,
+    "2.0": 180,
+    "2.5": 117,
+    "3.0": 557,
+    "3.5": 126,
+    "4.0": 843,
+    "4.5": 263,
+    "5.0": 430,
+    "5.5": 118,
+    "6.0": 149,
+    "6.5": 8,
+    "7.0": 5
+  },
+  "notional_hour_ranges": {
+    "401–600": 1187,
+    "601–800": 225,
+    "1201–2400": 102,
+    "201–400": 576,
+    "1–200": 556,
+    "1001–1200": 71,
+    "801–1000": 89,
+    "Above 2401": 4
+  },
+  "pwd_count": 235,
+  "pwd_categories": {
+    "MR": 1,
+    "LD": 87,
+    "SHI": 83,
+    "MD": 4,
+    "ID": 12,
+    "VI": 24
+  },
+  "duplicate_codes": {
+    "QG-04-ES-00913-2023-V1-SCGJ": [
+      {
+        "file": "Qualifications 02-10-2026 20_05_50.xlsx",
+        "title": "Junior Technician- Mechanized Sewer Cleaning",
+        "row": 20
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_05_50.xlsx",
+        "title": "Material Recovery Facility (MRF) Micro - Entrepreneur",
+        "row": 27
+      }
+    ]
+  },
+  "duplicate_titles": {
+    "Advance Pattern Maker (CAD/CAM)": [
+      {
+        "file": "Qualifications 02-10-2026 20_00_12.xlsx",
+        "code": "QG-05-AP-01772-2024-V1.1-AMHSSC,  Version 3.0",
+        "sector": "Apparel"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_00_12.xlsx",
+        "code": "QG-05-AP-03568-2025-V2-AMHSSC",
+        "sector": "Apparel"
+      }
+    ],
+    "Factory Compliance Auditor": [
+      {
+        "file": "Qualifications 02-10-2026 20_00_12.xlsx",
+        "code": "QG-05-AP-01779-2024-V1.1-AMHSSC,  Version 3.0",
+        "sector": "Apparel"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_00_12.xlsx",
+        "code": "QG-06-AP-03574-2025-V2-AMHSSC",
+        "sector": "Apparel"
+      }
+    ],
+    "Industrial Automation Technician": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_23.xlsx",
+        "code": "2022/AUT/IASC/06502",
+        "sector": "Automotive"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_07_14.xlsx",
+        "code": "QG-04-CG-045562025-V2-IASC",
+        "sector": "Instrumentation"
+      }
+    ],
+    "Industrial Automation Specialist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_23.xlsx",
+        "code": "2022/AUT/IASC/06500",
+        "sector": "Automotive"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_07_14.xlsx",
+        "code": "QG-05-CG-045552025-V2-IASC",
+        "sector": "Instrumentation"
+      }
+    ],
+    "Beauty Therapist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06576",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-04-BW-06576-2025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Bridal, Fashion and Portfolio Makeup Artist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06584",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-05-BW-065842025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Hair Dresser & Stylist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06579",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-04-BW-06579-2025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Master Wellness Neurotherapist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06589",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-05-BW-065892025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Personal Trainer (B&W)": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06580",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-04-BW-065802025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Professional Makeup Artist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06594",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-04-BW-065962025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Senior Beauty Therapist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06577",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-05-BW-06577-2025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Senior Wellness Neurotherapist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06588",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-04-BW-065882025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Spa Therapist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06586",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-04-BW-065862025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Wellness Neurotherapist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06587",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-03-BW-065872025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Yoga Trainer (B&W)": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "2022/BW/BWSSC/06593",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-04-BW-065922025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Senior Hair Dresser & Stylist": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QM-05-BW-00440-2023-V1.1-BWSSC",
+        "sector": "Beauty & Wellness"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_35.xlsx",
+        "code": "QG-05-BW-04402025-V2-BWSSC",
+        "sector": "Beauty & Wellness"
+      }
+    ],
+    "Stainless Steel Fabricator": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_56.xlsx",
+        "code": "2022/CCM/CGSC/06612",
+        "sector": "Capital Goods & Manufacturing"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_56.xlsx",
+        "code": "QG-05-CG-03945-2025-V2-CGSSC",
+        "sector": "Capital Goods & Manufacturing"
+      }
+    ],
+    "Locksmith": [
+      {
+        "file": "Qualifications 02-10-2026 20_01_56.xlsx",
+        "code": "NG-2.5-CG-00746-2023-V1-CGSC",
+        "sector": "Capital Goods & Manufacturing"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_01_56.xlsx",
+        "code": "NG-03-CG-02341-2024-V1-CGSC",
+        "sector": "Capital Goods & Manufacturing"
+      }
+    ],
+    "Assistant Electrician": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_11.xlsx",
+        "code": "QG-03-CO-03951-2025-V2-CSDCI",
+        "sector": "Construction"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_07_21.xlsx",
+        "code": "QG-03-IS-03883-2025-V2-IISSSC",
+        "sector": "Iron & Steel"
+      }
+    ],
+    "Service Technician – Home Appliances": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "2022/EHW/ESSC/05127",
+        "sector": "Electronics & HW"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-04-EH-044772025-V2-ESSCI",
+        "sector": "Electronics & HW"
+      }
+    ],
+    "LED Light Repair Technician": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "2022/EHW/ESSC/05126",
+        "sector": "Electronics & HW"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-04-EH-04473-2025-V2-ESSCI",
+        "sector": "Electronics & HW"
+      }
+    ],
+    "Smartphone Assembly Technician": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "2022/EHW/ESSC/05113",
+        "sector": "Electronics & HW"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-04-EH-044762025-V2-ESSCI",
+        "sector": "Electronics & HW"
+      }
+    ],
+    "Solar Panel Installation Technician": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "2022/EHW/ESSC/05118",
+        "sector": "Electronics & HW"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-04-EH-04471-2025-V2-ESSCI",
+        "sector": "Electronics & HW"
+      }
+    ],
+    "Wireman Control Panel Electronics": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "2022/EHW/ESSC/05129",
+        "sector": "Electronics & HW"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-03-EH-04474-2025-V2-ESSCI",
+        "sector": "Electronics & HW"
+      }
+    ],
+    "Assembly Operator - TV": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "2022/EHW/ESSC/05383",
+        "sector": "Electronics & HW"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-04-EH-044892025-V2-ESSCI",
+        "sector": "Electronics & HW"
+      }
+    ],
+    "Solar LED Technician": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "2022/EHW/ESSC/05378",
+        "sector": "Electronics & HW"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-04-EH-02821-2025-V4-ESSC",
+        "sector": "Electronics & HW"
+      }
+    ],
+    "Embedded Software Engineer": [
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-06-EH-00567-2023-V2-NIELIT & Version 2",
+        "sector": "Electronics & HW"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_02_28.xlsx",
+        "code": "QG-05-EH-03972-2025-V4-ESSCI",
+        "sector": "Electronics & HW"
+      }
+    ],
+    "Coir Fibre Artisan": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_27.xlsx",
+        "code": "QG-2.5-HC-01724-2023-V1.1-HCSSC",
+        "sector": "Handicrafts & Carpets"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_27.xlsx",
+        "code": "QG-03-HC-045202025-V2-HCSSC",
+        "sector": "Handicrafts & Carpets"
+      }
+    ],
+    "Ayurveda Ahara and Poshana Sahayak": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "2022/HLT/HSSC/06753",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-03-HE-04228-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Ayurveda Dietician": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "2022/HLT/HSSC/06754",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-06-HE-04229-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Healthcare Quality Assurance Manager": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "2022/HLT/HSSC/06764",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-06-HE-04225-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Patient Relations Associate": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "2022/HLT/HSSC/06763",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-05-HE-04222-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Central Sterile Service Department (CSSD) Assistant": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-04-HE-00652-2023-V1.1-HSSC",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-4.5-HE-04220-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Cupping Therapy Assistant": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-04-HE-00647-2023-V1.1-HSSC",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-03-HE-04230-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Hospital Front Desk Coordinator": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-04-HE-00659-2023-V1.1-HSSC",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-04-HE-04221-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Panchakarma Technician": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-04-HE-00649-2023-V1.1-HSSC",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-4.5-HE-00649-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Telehealth Services Coordinator": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-04-HE-00665-2023-V1.1-HSSC",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-04-HE-04218-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "Transplant Coordinator": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-05-HE-00666-2023-V1.1-HSSC",
+        "sector": "Healthcare"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_35.xlsx",
+        "code": "QG-06-HE-00666-2025-V2-HSSC",
+        "sector": "Healthcare"
+      }
+    ],
+    "General Housekeeper (Household and Small Establishment)": [
+      {
+        "file": "Qualifications 02-10-2026 20_06_44.xlsx",
+        "code": "QG-02-TH-00554-2023-V1.1-DWSSC",
+        "sector": "Home Management and Caregiving"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_06_44.xlsx",
+        "code": "QG-02-TH-03301-2024-V2-DWSSC",
+        "sector": "Home Management and Caregiving"
+      }
+    ],
+    "Technical Artist – AR/VR": [
+      {
+        "file": "Qualifications 02-10-2026 20_09_21.xlsx",
+        "code": "2021/ME/MESC/04872",
+        "sector": "Media & Entertainment"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_09_21.xlsx",
+        "code": "QG-4.5-ME-01841-2024-V1-MESC",
+        "sector": "Media & Entertainment"
+      }
+    ],
+    "Solar PV Installer-Civil-PwD SHI": [
+      {
+        "file": "Qualifications 02-10-2026 20_10_35.xlsx",
+        "code": "2021/PWD/SCPWD/04887",
+        "sector": "Persons with Disability"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_10_35.xlsx",
+        "code": "QG-04-PD-03369-2024-V1.1-SCPWD",
+        "sector": "Persons with Disability"
+      }
+    ],
+    "Solar PV Installer (Suryamitra)-PwD SHI": [
+      {
+        "file": "Qualifications 02-10-2026 20_10_35.xlsx",
+        "code": "2021/PWD/SCPWD/04883",
+        "sector": "Persons with Disability"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_10_35.xlsx",
+        "code": "QG-04-PWD-01608-2023-V1.1-SCPWD",
+        "sector": "Persons with Disability"
+      }
+    ],
+    "Automotive Maintenance Technician-Mechanical -PwD SHI": [
+      {
+        "file": "Qualifications 02-10-2026 20_10_35.xlsx",
+        "code": "2022/PWD/SCPWD/05262",
+        "sector": "Persons with Disability"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_10_35.xlsx",
+        "code": "QG-04-PWD-01597-2023-V1.1-SCPWD",
+        "sector": "Persons with Disability"
+      }
+    ],
+    "Jal Mitra": [
+      {
+        "file": "Qualifications 02-10-2026 20_10_44.xlsx",
+        "code": "2022/PLUM/WMPS/05464",
+        "sector": "Plumbing"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_10_44.xlsx",
+        "code": "QG-04-PL-03706-2025-V2-WMPS",
+        "sector": "Plumbing"
+      }
+    ],
+    "Water Pump Operator": [
+      {
+        "file": "Qualifications 02-10-2026 20_10_44.xlsx",
+        "code": "2022/PLUM/WMPS/05465",
+        "sector": "Plumbing"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_10_44.xlsx",
+        "code": "QG-04-PL-03705-2025-V2-WMPS",
+        "sector": "Plumbing"
+      }
+    ],
+    "ROOFTOP SOLAR PV (INSTALLATION & MAINTENANCE)": [
+      {
+        "file": "Qualifications 02-10-2026 20_12_11.xlsx",
+        "code": "NG-03-PW-02710-2024-V1-DGT",
+        "sector": "Power"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_12_11.xlsx",
+        "code": "NG-04-PW-02710-2024-V1-DGT",
+        "sector": "Power"
+      }
+    ],
+    "IoT Installation Solution Architect": [
+      {
+        "file": "Qualifications 02-10-2026 20_14_49.xlsx",
+        "code": "QG-05-TL-00470-2023-V1.1-TSSC",
+        "sector": "Telecom"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_14_49.xlsx",
+        "code": "QG-05-TL-00470-2025-V2-TSSC",
+        "sector": "Telecom"
+      }
+    ],
+    "Drone Monitoring and Maintenance Associate": [
+      {
+        "file": "Qualifications 02-10-2026 20_14_49.xlsx",
+        "code": "QG-03-TL-00466-2023-V1.1-TSSC",
+        "sector": "Telecom"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_14_49.xlsx",
+        "code": "QG-03-TL-00466-2025-V2 -TSSC",
+        "sector": "Telecom"
+      }
+    ],
+    "Carpenter": [
+      {
+        "file": "Qualifications 02-10-2026 20_16_08.xlsx",
+        "code": "NG-2.5-WC-00763-2023-V1-FFSC",
+        "sector": "Wood & Carpentry"
+      },
+      {
+        "file": "Qualifications 02-10-2026 20_16_08.xlsx",
+        "code": "QG-4.5-WC-00829-2023-V2-FFSC",
+        "sector": "Wood & Carpentry"
+      }
+    ]
+  },
+  "missing_fields": {},
+  "awarding_bodies": {
+    "Skill Council for Persons with Disability (SCPwD)": 231,
+    "Agriculture Skill Council of India (ASCI)": 160,
+    "Electronics Sector Skills Council Of India (ESSCI)": 131,
+    "National Institute of Electronics and Information Technology (NIELIT)": 129,
+    "Handicrafts and Carpet Sector Skill Council (HCSSC)": 127,
+    "IT-ITeS Sector Skills Council NASSCOM (SSC NASSCOM)": 123,
+    "Healthcare Sector Skill Council (HSSC)": 112,
+    "Media & Entertainment Skill Council (MESC)": 103,
+    "Automotive Skills Development Council (ASDC)": 99,
+    "Hydrocarbon Sector Skill Council (HSSCI)": 75,
+    "Tourism and Hospitality Skill Council (THSC)": 70,
+    "Life Sciences Sector Skill Development Council (LSSSDC)": 67,
+    "Textile Sector Skill Council (TSC)": 65,
+    "Logistics Sector Skill Council (LSC)": 63,
+    "Telecom Sector Skill Council (TSSC)": 62,
+    "Directorate General of Training (DGT)": 60,
+    "MSME Technology Centre, Ministry of Micro Small And Medium Enterprises, New Delhi": 59,
+    "Skill Council for Green Jobs (SCGJ)": 58,
+    "Beauty & Wellness Sector Skill Council (B&WSSC)": 55,
+    "Capital Goods and Strategic Skill Council (CGSSC)": 54
+  },
+  "qualification_types": {
+    "General Qualification": 1288,
+    "General Qualification,Upskilling Qualification": 97,
+    "Future Skills Qualification,Upskilling Qualification": 31,
+    "Future Skills Qualification": 291,
+    "National Occupational Standard": 54,
+    "Future Skills Qualification,Micro Credentials": 18,
+    "Future Skills Qualification,National Occupational Standard": 26,
+    "Future Skills Qualification,National Occupational Standard,Upskilling Qualification": 30,
+    "Future Skills Qualification,Micro Credentials,Upskilling Qualification": 4,
+    "General Qualification,Micro Credentials,Upskilling Qualification": 8,
+    "General Qualification,National Occupational Standard,Upskilling Qualification": 12,
+    "Cross Sectoral Qualification": 56,
+    "Apprenticeship Qualification,General Qualification,Upskilling Qualification": 113,
+    "Apprenticeship Qualification,Future Skills Qualification,Upskilling Qualification": 5,
+    "Apprenticeship Qualification,General Qualification": 45,
+    "Micro Credentials": 53,
+    "OEM Qualification": 5,
+    "Cross Sectoral Qualification,National Occupational Standard": 2,
+    "Multi-Skill Qualification": 116,
+    "General Qualification,National Occupational Standard": 11,
+    "General Qualification,National Occupational Standard,OEM Qualification": 2,
+    "Future Skills Qualification,National Occupational Standard,OEM Qualification": 1,
+    "Future Skills Qualification,General Qualification,OEM Qualification": 1,
+    "Upskilling Qualification": 85,
+    "Heritage/Traditional Qualification": 50,
+    "Dual/Flexi Qualification,Upskilling Qualification": 1,
+    "Cross Sectoral Qualification,Multi-Skill Qualification": 3,
+    "General Qualification,Heritage/Traditional Qualification,Upskilling Qualification": 6,
+    "Heritage/Traditional Qualification,Upskilling Qualification": 1,
+    "Cross Sectoral Qualification,Dual/Flexi Qualification,Multi-Skill Qualification,National Occupational Standard,Upskilling Qualification": 2,
+    "Cross Sectoral Qualification,General Qualification": 17,
+    "Cross Sectoral Qualification,Future Skills Qualification": 16,
+    "General Qualification,Multi-Skill Qualification": 34,
+    "General Qualification,OEM Qualification,Upskilling Qualification": 2,
+    "Cross Sectoral Qualification,General Qualification,Multi-Skill Qualification": 3,
+    "Future Skills Qualification,General Qualification,Upskilling Qualification": 11,
+    "Apprenticeship Qualification,Cross Sectoral Qualification,General Qualification,Multi-Skill Qualification": 16,
+    "Apprenticeship Qualification,Cross Sectoral Qualification,General Qualification,Multi-Skill Qualification,Upskilling Qualification": 2,
+    "Cross Sectoral Qualification,Upskilling Qualification": 7,
+    "OEM Qualification,Upskilling Qualification": 3,
+    "General Qualification,Multi-Skill Qualification,Upskilling Qualification": 4,
+    "Future Skills Qualification,General Qualification": 42,
+    "General Qualification,OEM Qualification": 5,
+    "General Qualification,Heritage/Traditional Qualification": 4,
+    "Cross Sectoral Qualification,Dual/Flexi Qualification,Future Skills Qualification,General Qualification,Heritage/Traditional Qualification,National Occupational Standard,Upskilling Qualification": 3,
+    "Cross Sectoral Qualification,Multi-Skill Qualification,National Occupational Standard": 1,
+    "Heritage/Traditional Qualification,Multi-Skill Qualification": 17,
+    "Future Skills Qualification,Multi-Skill Qualification": 21,
+    "Future Skills Qualification,OEM Qualification": 42,
+    "Future Skills Qualification,OEM Qualification,Upskilling Qualification": 14,
+    "Future Skills Qualification,General Qualification,National Occupational Standard,Upskilling Qualification": 1,
+    "Multi-Skill Qualification,OEM Qualification": 1,
+    "Micro Credentials,Upskilling Qualification": 4,
+    "National Occupational Standard,Upskilling Qualification": 2,
+    "Cross Sectoral Qualification,General Qualification,National Occupational Standard": 1,
+    "Cross Sectoral Qualification,General Qualification,Micro Credentials,Upskilling Qualification": 2,
+    "Cross Sectoral Qualification,General Qualification,National Occupational Standard,Upskilling Qualification": 3,
+    "Apprenticeship Qualification,Cross Sectoral Qualification,General Qualification": 6,
+    "General Qualification,Multi-Skill Qualification,National Occupational Standard,Upskilling Qualification": 2,
+    "Cross Sectoral Qualification,Future Skills Qualification,General Qualification,Upskilling Qualification": 1,
+    "Apprenticeship Qualification,Future Skills Qualification": 28,
+    "Apprenticeship Qualification,Future Skills Qualification,National Occupational Standard": 1,
+    "Apprenticeship Qualification,General Qualification,National Occupational Standard": 2,
+    "General Qualification,Heritage/Traditional Qualification,Multi-Skill Qualification": 1,
+    "Future Skills Qualification,General Qualification,Heritage/Traditional Qualification": 1,
+    "General Qualification,Micro Credentials": 6,
+    "Multi-Skill Qualification,Upskilling Qualification": 2,
+    "Dual/Flexi Qualification,Future Skills Qualification,Upskilling Qualification": 1,
+    "Cross Sectoral Qualification,Future Skills Qualification,Multi-Skill Qualification,Upskilling Qualification": 1,
+    "Multi-Skill Qualification,National Occupational Standard,OEM Qualification": 1,
+    "Cross Sectoral Qualification,Future Skills Qualification,Multi-Skill Qualification": 5,
+    "Future Skills Qualification,General Qualification,Multi-Skill Qualification,National Occupational Standard,Upskilling Qualification": 2,
+    "General Qualification,National Occupational Standard,OEM Qualification,Upskilling Qualification": 1,
+    "Cross Sectoral Qualification,Future Skills Qualification,General Qualification,National Occupational Standard,OEM Qualification": 1,
+    "Future Skills Qualification,Micro Credentials,OEM Qualification,Upskilling Qualification": 2,
+    "Dual/Flexi Qualification,Future Skills Qualification,Multi-Skill Qualification": 2,
+    "Dual/Flexi Qualification,General Qualification,Micro Credentials,Upskilling Qualification": 4,
+    "Dual/Flexi Qualification,Micro Credentials,Upskilling Qualification": 3,
+    "Dual/Flexi Qualification,General Qualification,Micro Credentials": 1,
+    "Apprenticeship Qualification,Dual/Flexi Qualification,General Qualification,Upskilling Qualification": 8,
+    "Apprenticeship Qualification,Dual/Flexi Qualification,Multi-Skill Qualification,Upskilling Qualification": 2,
+    "Apprenticeship Qualification,Dual/Flexi Qualification,General Qualification,Multi-Skill Qualification,Upskilling Qualification": 3,
+    "Apprenticeship Qualification,Dual/Flexi Qualification,General Qualification": 1,
+    "Dual/Flexi Qualification,General Qualification,Upskilling Qualification": 10,
+    "Dual/Flexi Qualification,Future Skills Qualification,General Qualification,Upskilling Qualification": 2,
+    "Cross Sectoral Qualification,Dual/Flexi Qualification,General Qualification,Upskilling Qualification": 1,
+    "Dual/Flexi Qualification,General Qualification,National Occupational Standard,Upskilling Qualification": 1,
+    "Cross Sectoral Qualification,Future Skills Qualification,General Qualification": 2,
+    "Cross Sectoral Qualification,Dual/Flexi Qualification": 1,
+    "Apprenticeship Qualification,Cross Sectoral Qualification,General Qualification,Upskilling Qualification": 1,
+    "Cross Sectoral Qualification,Future Skills Qualification,National Occupational Standard,Upskilling Qualification": 1,
+    "Cross Sectoral Qualification,General Qualification,Micro Credentials": 1,
+    "Apprenticeship Qualification,General Qualification,Heritage/Traditional Qualification": 5,
+    "Apprenticeship Qualification,Future Skills Qualification,General Qualification,Upskilling Qualification": 1,
+    "Cross Sectoral Qualification,General Qualification,Upskilling Qualification": 1
+  },
+  "manual_review_needed": []
+}
